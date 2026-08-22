@@ -53,17 +53,18 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-    mode: 'system',
+    mode: 'light',
     setMode: () => {},
-    colors: darkColors,
-    isDark: true,
+    colors: lightColors,
+    isDark: false,
 });
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const deviceScheme = useDeviceColorScheme();
-    const [mode, setMode] = useState<ThemeMode>('system');
+    // Set default state explicitly to 'light'
+    const [mode, setMode] = useState<ThemeMode>('light');
 
-    const resolvedScheme = mode === 'system' ? (deviceScheme || 'dark') : mode;
+    const resolvedScheme = mode === 'system' ? (deviceScheme || 'light') : mode;
     const isDark = resolvedScheme === 'dark';
     const colors = isDark ? darkColors : lightColors;
 
