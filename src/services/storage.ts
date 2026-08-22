@@ -1,6 +1,12 @@
 import { MMKV } from 'react-native-mmkv';
 
-export const storage = new MMKV();
+let storageInstance: MMKV | null = null;
+
+try {
+    storageInstance = new MMKV();
+} catch (e) {
+    console.warn('MMKV initialization deferred/unavailable, running in-memory fallback.', e);
+}
 
 export const KEYS = {
     RATES_CACHE: 'x2_rates_cache',
@@ -13,15 +19,32 @@ export interface CachedData {
     timestamp: string;
 }
 
+const memoryStore: Record<string, string> = {};
+
 export const saveCachedRates = (rates: Record<string, number>): void => {
     const timestamp = new Date().toISOString();
-    storage.set(KEYS.RATES_CACHE, JSON.stringify(rates));
-    storage.set(KEYS.OFFLINE_TIMESTAMP, timestamp);
+    const ratesJson = JSON.stringify(rates);
+
+    if (storageInstance) {
+        storageInstance.set(KEYS.RATES_CACHE, ratesJson);
+        storageInstance.set(KEYS.OFFLINE_TIMESTAMP, timestamp);
+    } else {
+        memoryStore[KEYS.RATES_CACHE] = ratesJson;
+        memoryStore[KEYS.OFFLINE_TIMESTAMP] = timestamp;
+    }
 };
 
 export const getCachedRates = (): CachedData | null => {
-    const ratesData = storage.getString(KEYS.RATES_CACHE);
-    const timestamp = storage.getString(KEYS.OFFLINE_TIMESTAMP);
+    let ratesData: string | undefined;
+    let timestamp: string | undefined;
+
+    if (storageInstance) {
+        ratesData = storageInstance.getString(KEYS.RATES_CACHE);
+        timestamp = storageInstance.getString(KEYS.OFFLINE_TIMESTAMP);
+    } else {
+        ratesData = memoryStore[KEYS.RATES_CACHE];
+        timestamp = memoryStore[KEYS.OFFLINE_TIMESTAMP];
+    }
 
     if (!ratesData) return null;
 

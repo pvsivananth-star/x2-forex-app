@@ -5,18 +5,23 @@ import { FavoritesScreen } from '../screens/FavoritesScreen';
 import { CryptoScreen } from '../screens/CryptoScreen';
 import { MetalsScreen } from '../screens/MetalsScreen';
 import { ChartsScreen } from '../screens/ChartsScreen';
+import { useTheme } from '../context/ThemeContext';
+
 
 const Tab = createBottomTabNavigator();
 
 export const TabNavigator = () => {
+    const { colors } = useTheme();
     return (
         <NavigationContainer>
             <Tab.Navigator
                 screenOptions={{
-                    headerShown: false,
-                    tabBarStyle: { backgroundColor: '#0F172A', borderTopColor: '#1E293B' },
-                    tabBarActiveTintColor: '#38BDF8',
-                    tabBarInactiveTintColor: '#64748B',
+                    tabBarStyle: {
+                        backgroundColor: colors.card,
+                        borderTopColor: colors.cardBorder,
+                    },
+                    tabBarActiveTintColor: colors.accent,
+                    tabBarInactiveTintColor: colors.textMuted,
                 }}
             >
                 <Tab.Screen name="Forex" component={FavoritesScreen} />
