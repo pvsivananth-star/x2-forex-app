@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { FavoritesScreen } from '../screens/FavoritesScreen';
 import { CryptoScreen } from '../screens/CryptoScreen';
 import { MetalsScreen } from '../screens/MetalsScreen';
+import { ChartsScreen } from '../screens/ChartsScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -21,6 +22,7 @@ export const TabNavigator = () => {
                 <Tab.Screen name="Forex" component={FavoritesScreen} />
                 <Tab.Screen name="Crypto" component={CryptoScreen} />
                 <Tab.Screen name="Metals" component={MetalsScreen} />
+                <Tab.Screen name="Charts" component={ChartsScreen} />
             </Tab.Navigator>
         </NavigationContainer>
     );
