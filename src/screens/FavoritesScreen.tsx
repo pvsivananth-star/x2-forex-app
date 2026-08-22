@@ -4,10 +4,10 @@ import {
     Text,
     TextInput,
     StyleSheet,
-    SafeAreaView,
     FlatList,
     TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context'; // Updated Import
 import { Header } from '../components/Header';
 import { useTheme } from '../context/ThemeContext';
 import { fetchAllRates, RatesMap } from '../api/ratesApi';
@@ -48,7 +48,6 @@ export const FavoritesScreen = () => {
         setIsOffline(result.isOffline);
     };
 
-    // Compute parsing numerical values in background
     const parsedAmount = useMemo(() => {
         const sanitized = amountText.replace(/,/g, '');
         const num = parseFloat(sanitized);
@@ -73,10 +72,9 @@ export const FavoritesScreen = () => {
     };
 
     return (
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
             <Header isOffline={isOffline} onRefresh={loadData} />
 
-            {/* Persistent Base Card Out of FlatList Header to retain focus */}
             <View style={styles.headerPadding}>
                 <View style={[styles.baseCard, { backgroundColor: colors.card, borderColor: colors.accent }]}>
                     <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>Active Base Currency</Text>
@@ -118,9 +116,7 @@ export const FavoritesScreen = () => {
                     return (
                         <TouchableOpacity
                             style={[styles.rowCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}
-                            onPress={() => {
-                                setBaseCurrency(item);
-                            }}
+                            onPress={() => setBaseCurrency(item)}
                         >
                             <Text style={styles.flagText}>{item.flag}</Text>
                             <View style={styles.rowMeta}>

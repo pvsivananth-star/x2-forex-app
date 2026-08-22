@@ -1,55 +1,66 @@
-import { MMKV } from 'react-native-mmkv';
+import * as MMKVModule from 'react-native-mmkv';
 
-let storageInstance: MMKV | null = null;
-
-try {
-    storageInstance = new MMKV();
-} catch (e) {
-    console.warn('MMKV initialization deferred/unavailable, running in-memory fallback.', e);
+interface StorageAdapter {
+    getString: (key: string) => string | undefined;
+    set: (key: string, value: string) => void;
+    delete: (key: string) => void;
 }
 
-export const KEYS = {
+const createStorage = (): StorageAdapter => {
+    try {
+        const MMKVClass = MMKVModule.MMKV || (MMKVModule as any).default?.MMKV;
+        if (typeof MMKVClass === 'function') {
+            const instance = new MMKVClass();
+            return {
+                getString: (k: string) => instance.getString(k),
+                set: (k: string, v: string) => instance.set(k, v),
+                delete: (k: string) => instance.delete(k),
+            };
+        }
+    } catch {
+        // Fallback if JSI bindings are uninitialized or in Expo/Web
+    }
+
+    const memoryStore = new Map<string, string>();
+    return {
+        getString: (k: string) => memoryStore.get(k),
+        set: (k: string, v: string) => {
+            memoryStore.set(k, v);
+        },
+        delete: (k: string) => {
+            memoryStore.delete(k);
+        },
+    };
+};
+
+const storageInstance = createStorage();
+
+export const STORAGE_KEYS = {
     RATES_CACHE: 'x2_rates_cache',
-    OFFLINE_TIMESTAMP: 'x2_offline_timestamp',
-    USER_PREFERENCES: 'x2_user_prefs',
 };
 
 export interface CachedData {
+    timestamp: number;
     rates: Record<string, number>;
-    timestamp: string;
 }
 
-const memoryStore: Record<string, string> = {};
-
-export const saveCachedRates = (rates: Record<string, number>): void => {
-    const timestamp = new Date().toISOString();
-    const ratesJson = JSON.stringify(rates);
-
-    if (storageInstance) {
-        storageInstance.set(KEYS.RATES_CACHE, ratesJson);
-        storageInstance.set(KEYS.OFFLINE_TIMESTAMP, timestamp);
-    } else {
-        memoryStore[KEYS.RATES_CACHE] = ratesJson;
-        memoryStore[KEYS.OFFLINE_TIMESTAMP] = timestamp;
+export const getCachedRates = (): CachedData | null => {
+    try {
+        const raw = storageInstance.getString(STORAGE_KEYS.RATES_CACHE);
+        return raw ? JSON.parse(raw) : null;
+    } catch {
+        return null;
     }
 };
 
-export const getCachedRates = (): CachedData | null => {
-    let ratesData: string | undefined;
-    let timestamp: string | undefined;
-
-    if (storageInstance) {
-        ratesData = storageInstance.getString(KEYS.RATES_CACHE);
-        timestamp = storageInstance.getString(KEYS.OFFLINE_TIMESTAMP);
-    } else {
-        ratesData = memoryStore[KEYS.RATES_CACHE];
-        timestamp = memoryStore[KEYS.OFFLINE_TIMESTAMP];
+export const saveCachedRates = (rates: Record<string, number>): void => {
+    try {
+        const payload: CachedData = {
+            timestamp: Date.now(),
+            rates,
+        };
+        storageInstance.set(STORAGE_KEYS.RATES_CACHE, JSON.stringify(payload));
+    } catch (err) {
+        console.warn('Failed to persist cache:', err);
     }
-
-    if (!ratesData) return null;
-
-    return {
-        rates: JSON.parse(ratesData),
-        timestamp: timestamp || new Date().toISOString(),
-    };
 };

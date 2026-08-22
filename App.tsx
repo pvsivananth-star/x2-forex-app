@@ -1,6 +1,7 @@
 import React from 'react';
 import { StatusBar } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { TabNavigator } from './src/navigation/TabNavigator';
 
@@ -17,10 +18,12 @@ const MainApp = () => {
 
 export default function App() {
     return (
-        <ThemeProvider>
-            <NavigationContainer>
-                <MainApp />
-            </NavigationContainer>
-        </ThemeProvider>
+        <SafeAreaProvider>
+            <ThemeProvider>
+                <NavigationContainer>
+                    <MainApp />
+                </NavigationContainer>
+            </ThemeProvider>
+        </SafeAreaProvider>
     );
 }
