@@ -21,8 +21,7 @@ interface BurgerMenuProps {
 }
 
 export const BurgerMenu: React.FC<BurgerMenuProps> = ({ visible, onClose, onNavigate }) => {
-    // 1. All hooks MUST be declared at the absolute top, unconditionally
-    const { colors, mode, setMode } = useTheme();
+    const { colors, mode, setMode, precision, setPrecision } = useTheme();
     const [lastSync, setLastSync] = useState<string>('Never');
 
     useEffect(() => {
@@ -37,7 +36,7 @@ export const BurgerMenu: React.FC<BurgerMenuProps> = ({ visible, onClose, onNavi
     const handlePurgeCache = () => {
         saveCachedRates({});
         setLastSync('Cleared');
-        Alert.alert('Cache Cleared', 'Offline MMKV storage has been purged. Re-syncing...');
+        Alert.alert('Cache Cleared', 'Offline MMKV storage has been purged.');
     };
 
     const handleNav = (screen: string) => {
@@ -74,6 +73,25 @@ export const BurgerMenu: React.FC<BurgerMenuProps> = ({ visible, onClose, onNavi
                                     <Text style={[styles.menuLabel, { color: colors.textPrimary }]}>📈 7-Day Charts</Text>
                                 </TouchableOpacity>
 
+                                {/* Decimal Precision Configuration */}
+                                <Text style={[styles.sectionHeading, { color: colors.textMuted, marginTop: 20 }]}>DECIMAL PRECISION</Text>
+                                <View style={styles.themeGroup}>
+                                    {[2, 3, 4].map((p) => (
+                                        <TouchableOpacity
+                                            key={p}
+                                            style={[
+                                                styles.themeChip,
+                                                { backgroundColor: precision === p ? colors.accent : colors.inputBg },
+                                            ]}
+                                            onPress={() => setPrecision(p)}
+                                        >
+                                            <Text style={{ color: precision === p ? '#FFF' : colors.textMuted, fontSize: 11, fontWeight: '700' }}>
+                                                {p} DECIMALS
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+
                                 {/* Theme Selector */}
                                 <Text style={[styles.sectionHeading, { color: colors.textMuted, marginTop: 20 }]}>THEME MODE</Text>
                                 <View style={styles.themeGroup}>
@@ -102,7 +120,7 @@ export const BurgerMenu: React.FC<BurgerMenuProps> = ({ visible, onClose, onNavi
                                     </TouchableOpacity>
                                 </View>
 
-                                {/* Legal & Sources */}
+                                {/* Legal & Data Sources */}
                                 <Text style={[styles.sectionHeading, { color: colors.textMuted, marginTop: 20 }]}>DATA SOURCES & DISCLAIMER</Text>
                                 <Text style={[styles.legalText, { color: colors.textMuted }]}>
                                     Rates provided keyless via ECB (Frankfurter) and CoinGecko endpoints.

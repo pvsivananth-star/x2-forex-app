@@ -48,6 +48,8 @@ const darkColors: ThemeColors = {
 interface ThemeContextType {
     mode: ThemeMode;
     setMode: (mode: ThemeMode) => void;
+    precision: number;
+    setPrecision: (p: number) => void;
     colors: ThemeColors;
     isDark: boolean;
 }
@@ -55,21 +57,23 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType>({
     mode: 'light',
     setMode: () => {},
+    precision: 2,
+    setPrecision: () => {},
     colors: lightColors,
     isDark: false,
 });
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const deviceScheme = useDeviceColorScheme();
-    // Set default state explicitly to 'light'
     const [mode, setMode] = useState<ThemeMode>('light');
+    const [precision, setPrecision] = useState<number>(2);
 
     const resolvedScheme = mode === 'system' ? (deviceScheme || 'light') : mode;
     const isDark = resolvedScheme === 'dark';
     const colors = isDark ? darkColors : lightColors;
 
     return (
-        <ThemeContext.Provider value={{ mode, setMode, colors, isDark }}>
+        <ThemeContext.Provider value={{ mode, setMode, precision, setPrecision, colors, isDark }}>
             {children}
         </ThemeContext.Provider>
     );

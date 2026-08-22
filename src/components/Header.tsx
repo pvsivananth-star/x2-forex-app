@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { BurgerMenu } from './BurgerMenu';
 
@@ -22,15 +22,9 @@ export const Header: React.FC<HeaderProps> = ({ isOffline, onRefresh, onNavigate
             />
 
             <View style={styles.topRow}>
-                <View style={styles.leftGroup}>
-                    <TouchableOpacity onPress={() => setIsMenuOpen(true)} style={styles.burgerBtn}>
-                        <Text style={[styles.burgerIcon, { color: colors.textPrimary }]}>☰</Text>
-                    </TouchableOpacity>
-                    <View style={styles.titleRow}>
-                        <Text style={[styles.logoText, { color: colors.accent }]}>X2</Text>
-                        <Text style={[styles.subtitleText, { color: colors.textMuted }]}>Forex & Spot</Text>
-                    </View>
-                </View>
+                <TouchableOpacity onPress={() => setIsMenuOpen(true)} style={styles.burgerBtn}>
+                    <Text style={[styles.burgerIcon, { color: colors.textPrimary }]}>☰</Text>
+                </TouchableOpacity>
 
                 <View style={styles.rightRow}>
                     <View style={styles.statusRow}>
@@ -56,17 +50,12 @@ export const Header: React.FC<HeaderProps> = ({ isOffline, onRefresh, onNavigate
 const styles = StyleSheet.create({
     container: {
         paddingHorizontal: 16,
-        paddingTop: 12,
-        paddingBottom: 12,
+        paddingVertical: 10,
         borderBottomWidth: 1,
     },
     topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    leftGroup: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     burgerBtn: { paddingRight: 4 },
-    burgerIcon: { fontSize: 20, fontWeight: '700' },
-    titleRow: { flexDirection: 'row', alignItems: 'baseline' },
-    logoText: { fontSize: 22, fontWeight: '800', marginRight: 6 },
-    subtitleText: { fontSize: 12, fontWeight: '500' },
+    burgerIcon: { fontSize: 22, fontWeight: '700' },
     rightRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     statusRow: { flexDirection: 'row', alignItems: 'center' },
     dot: { width: 7, height: 7, borderRadius: 3.5, marginRight: 5 },

@@ -1,14 +1,26 @@
 import React from 'react';
 import { StatusBar } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { TabNavigator } from './src/navigation/TabNavigator';
 
-function App(): React.JSX.Element {
+const MainApp = () => {
+    const { isDark } = useTheme();
+
     return (
         <>
-            <StatusBar barStyle="light-content" backgroundColor="#0F172A" />
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
             <TabNavigator />
         </>
     );
-}
+};
 
-export default App;
+export default function App() {
+    return (
+        <ThemeProvider>
+            <NavigationContainer>
+                <MainApp />
+            </NavigationContainer>
+        </ThemeProvider>
+    );
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     View,
     Text,
@@ -17,25 +17,26 @@ interface CurrencyItem {
     code: string;
     name: string;
     flag: string;
+    locale: string;
 }
 
 const DEFAULT_CURRENCIES: CurrencyItem[] = [
-    { code: 'USD', name: 'US Dollar', flag: '🇺🇸' },
-    { code: 'EUR', name: 'Euro', flag: '🇪🇺' },
-    { code: 'GBP', name: 'British Pound', flag: '🇬🇧' },
-    { code: 'CAD', name: 'Canadian Dollar', flag: '🇨🇦' },
-    { code: 'AUD', name: 'Australian Dollar', flag: '🇦🇺' },
-    { code: 'INR', name: 'Indian Rupee', flag: '🇮🇳' },
-    { code: 'JPY', name: 'Japanese Yen', flag: '🇯🇵' },
-    { code: 'XAU', name: 'Gold Ounce', flag: '🥇' },
+    { code: 'USD', name: 'US Dollar', flag: '🇺🇸', locale: 'en-US' },
+    { code: 'EUR', name: 'Euro', flag: '🇪🇺', locale: 'de-DE' },
+    { code: 'GBP', name: 'British Pound', flag: '🇬🇧', locale: 'en-GB' },
+    { code: 'CAD', name: 'Canadian Dollar', flag: '🇨🇦', locale: 'en-CA' },
+    { code: 'AUD', name: 'Australian Dollar', flag: '🇦🇺', locale: 'en-AU' },
+    { code: 'INR', name: 'Indian Rupee', flag: '🇮🇳', locale: 'en-IN' },
+    { code: 'JPY', name: 'Japanese Yen', flag: '🇯🇵', locale: 'ja-JP' },
+    { code: 'XAU', name: 'Gold Ounce', flag: '🥇', locale: 'en-US' },
 ];
 
 export const FavoritesScreen = () => {
-    const { colors } = useTheme();
+    const { colors, precision } = useTheme();
     const [rates, setRates] = useState<RatesMap>({});
     const [isOffline, setIsOffline] = useState(false);
     const [baseCurrency, setBaseCurrency] = useState<CurrencyItem>(DEFAULT_CURRENCIES[0]);
-    const [amount, setAmount] = useState('1.0000');
+    const [amountText, setAmountText] = useState('1');
 
     useEffect(() => {
         loadData();
@@ -47,50 +48,60 @@ export const FavoritesScreen = () => {
         setIsOffline(result.isOffline);
     };
 
-    const parsedAmount = parseFloat(amount) || 0;
+    // Compute parsing numerical values in background
+    const parsedAmount = useMemo(() => {
+        const sanitized = amountText.replace(/,/g, '');
+        const num = parseFloat(sanitized);
+        return isNaN(num) ? 0 : num;
+    }, [amountText]);
+
     const baseRate = rates[baseCurrency.code] || 1;
-    const targetCurrencies = DEFAULT_CURRENCIES.filter((item) => item.code !== baseCurrency.code);
+    const targetCurrencies = useMemo(
+        () => DEFAULT_CURRENCIES.filter((item) => item.code !== baseCurrency.code),
+        [baseCurrency.code]
+    );
+
+    const formatLocaleNumber = (val: number, locale: string, digits: number) => {
+        try {
+            return new Intl.NumberFormat(locale, {
+                minimumFractionDigits: digits,
+                maximumFractionDigits: digits,
+            }).format(val);
+        } catch {
+            return val.toFixed(digits);
+        }
+    };
 
     return (
         <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
             <Header isOffline={isOffline} onRefresh={loadData} />
 
+            {/* Persistent Base Card Out of FlatList Header to retain focus */}
+            <View style={styles.headerPadding}>
+                <View style={[styles.baseCard, { backgroundColor: colors.card, borderColor: colors.accent }]}>
+                    <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>Active Base Currency</Text>
+                    <View style={styles.baseRow}>
+                        <Text style={styles.flagText}>{baseCurrency.flag}</Text>
+                        <View style={styles.baseMeta}>
+                            <Text style={[styles.currencyCode, { color: colors.textPrimary }]}>{baseCurrency.code}</Text>
+                            <Text style={[styles.currencyName, { color: colors.textMuted }]}>{baseCurrency.name}</Text>
+                        </View>
+                        <TextInput
+                            style={[styles.baseInput, { color: colors.accent, borderBottomColor: colors.accent }]}
+                            keyboardType="decimal-pad"
+                            value={amountText}
+                            onChangeText={setAmountText}
+                            placeholder="0"
+                            placeholderTextColor={colors.textMuted}
+                        />
+                    </View>
+                </View>
+            </View>
+
             <FlatList
                 data={targetCurrencies}
                 keyExtractor={(item) => item.code}
-                ListHeaderComponent={() => (
-                    <View
-                        style={[
-                            styles.baseCard,
-                            { backgroundColor: colors.card, borderColor: colors.accent },
-                        ]}
-                    >
-                        <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
-                            Active Base Currency
-                        </Text>
-                        <View style={styles.baseRow}>
-                            <Text style={styles.flagText}>{baseCurrency.flag}</Text>
-                            <View style={styles.baseMeta}>
-                                <Text style={[styles.currencyCode, { color: colors.textPrimary }]}>
-                                    {baseCurrency.code}
-                                </Text>
-                                <Text style={[styles.currencyName, { color: colors.textMuted }]}>
-                                    {baseCurrency.name}
-                                </Text>
-                            </View>
-                            <TextInput
-                                style={[
-                                    styles.baseInput,
-                                    { color: colors.accent, borderBottomColor: colors.accent },
-                                ]}
-                                keyboardType="numeric"
-                                value={amount}
-                                onChangeText={setAmount}
-                                placeholderTextColor={colors.textMuted}
-                            />
-                        </View>
-                    </View>
-                )}
+                keyboardShouldPersistTaps="handled"
                 renderItem={({ item }) => {
                     const targetRate = rates[item.code] || 1;
                     const { convertedValue, unitLabel } = calculateCrossRate(
@@ -99,16 +110,17 @@ export const FavoritesScreen = () => {
                         targetRate,
                         baseCurrency.code,
                         item.code,
-                        4
+                        precision
                     );
+
+                    const formattedValue = formatLocaleNumber(convertedValue, item.locale, precision);
 
                     return (
                         <TouchableOpacity
-                            style={[
-                                styles.rowCard,
-                                { backgroundColor: colors.card, borderColor: colors.cardBorder },
-                            ]}
-                            onPress={() => setBaseCurrency(item)}
+                            style={[styles.rowCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}
+                            onPress={() => {
+                                setBaseCurrency(item);
+                            }}
                         >
                             <Text style={styles.flagText}>{item.flag}</Text>
                             <View style={styles.rowMeta}>
@@ -118,9 +130,7 @@ export const FavoritesScreen = () => {
                                 </View>
                                 <Text style={[styles.rowEquiv, { color: colors.textSecondary }]}>{unitLabel}</Text>
                             </View>
-                            <Text style={[styles.rowValue, { color: colors.accent }]}>
-                                {convertedValue.toFixed(4)}
-                            </Text>
+                            <Text style={[styles.rowValue, { color: colors.accent }]}>{formattedValue}</Text>
                         </TouchableOpacity>
                     );
                 }}
@@ -132,13 +142,14 @@ export const FavoritesScreen = () => {
 
 const styles = StyleSheet.create({
     safeArea: { flex: 1 },
-    listContent: { padding: 16 },
+    headerPadding: { paddingHorizontal: 16, paddingTop: 16 },
+    listContent: { paddingHorizontal: 16, paddingBottom: 16 },
     sectionLabel: { fontSize: 10, fontWeight: '700', marginBottom: 6, textTransform: 'uppercase' },
     baseCard: {
         padding: 14,
         borderRadius: 10,
         borderWidth: 1.5,
-        marginBottom: 14,
+        marginBottom: 8,
     },
     baseRow: { flexDirection: 'row', alignItems: 'center' },
     flagText: { fontSize: 24, marginRight: 10 },
@@ -151,7 +162,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1.5,
         paddingHorizontal: 6,
         paddingVertical: 2,
-        minWidth: 100,
+        minWidth: 110,
         textAlign: 'right',
     },
     rowCard: {
