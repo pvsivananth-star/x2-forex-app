@@ -12,7 +12,7 @@ const createStorage = (): StorageAdapter => {
         return {
             getString: (k: string) => instance.getString(k),
             set: (k: string, v: string) => instance.set(k, v),
-            delete: (k: string) => instance.delete(k),
+            delete: (k: string) => instance.remove(k),
         };
     } catch {
         // Fallback if JSI bindings are uninitialized or in Expo/Web
