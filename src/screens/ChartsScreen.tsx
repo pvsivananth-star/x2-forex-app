@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Rect, Line, Circle } from 'react-native-svg';
 import { Header } from '../components/Header';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../context/ThemeContext.tsx';
 
 const SCREEN_WIDTH = Dimensions.get('window').width - 32;
 const CHART_HEIGHT = 240;

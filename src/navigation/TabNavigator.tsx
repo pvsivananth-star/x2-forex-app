@@ -1,7 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../context/ThemeContext.tsx';
 import { FavoritesScreen } from '../screens/FavoritesScreen';
 import { CryptoScreen } from '../screens/CryptoScreen';
 import { MetalsScreen } from '../screens/MetalsScreen';

@@ -10,7 +10,7 @@ import {
     ScrollView,
     Alert,
 } from 'react-native';
-import { useTheme, ThemeMode } from '../context/ThemeContext';
+import { useTheme, ThemeMode } from '../context/ThemeContext.tsx';
 import { getCachedRates, saveCachedRates } from '../services/storage';
 import { LEGAL_DISCLAIMER } from '../constants/disclaimer';
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import { Header } from '../components/Header';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../context/ThemeContext.tsx';
 
 export const PortfolioScreen = () => {
     const { colors } = useTheme();
