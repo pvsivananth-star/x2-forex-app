@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import { Header } from '../components/Header';
-import { fetchRates, RatesMap } from '../api/ratesApi';
+import { fetchAllRates } from '../api/ratesApi';
 
 export const MetalsScreen = () => {
     const [goldPrice, setGoldPrice] = useState<string>('Loading...');
 
     useEffect(() => {
-        fetchRates().then((rates: RatesMap) => {
+        fetchAllRates().then(({ rates }) => {
             if (rates && rates.XAU) {
                 setGoldPrice((1 / rates.XAU).toFixed(2));
             }

@@ -1,4 +1,4 @@
-import { MMKV } from 'react-native-mmkv';
+import { createMMKV } from 'react-native-mmkv';
 
 interface StorageAdapter {
     getString: (key: string) => string | undefined;
@@ -8,7 +8,7 @@ interface StorageAdapter {
 
 const createStorage = (): StorageAdapter => {
     try {
-        const instance = new MMKV();
+        const instance = createMMKV();
         return {
             getString: (k: string) => instance.getString(k),
             set: (k: string, v: string) => instance.set(k, v),
