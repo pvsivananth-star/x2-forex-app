@@ -3,11 +3,11 @@ import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '../components/Header';
 import { useTheme } from '../context/ThemeContext.tsx';
-import { fetchCryptoRates } from '../api/ratesApi';
+import { fetchCryptoRates, CryptoItem } from '../api/ratesApi';
 
 export const CryptoScreen = () => {
     const { colors, precision } = useTheme();
-    const [cryptoData, setCryptoData] = useState([]);
+    const [cryptoData, setCryptoData] = useState<CryptoItem[]>([]);
     const [isOffline, setIsOffline] = useState(false);
 
     const loadData = async () => {
@@ -37,14 +37,14 @@ export const CryptoScreen = () => {
 
     return (
         <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
-            <Header title="Crypto" isOffline={isOffline} onRefresh={loadData} />
+            <Header isOffline={isOffline} onRefresh={loadData} />
             <View style={styles.container}>
                 <Text style={[styles.subtitle, { color: colors.textMuted }]}>Top 10 Market Cap Cryptocurrencies</Text>
                 <FlatList
                     data={cryptoData}
-                    keyExtractor={(item: any) => item.id}
+                    keyExtractor={(item: CryptoItem) => item.id}
                     contentContainerStyle={styles.listContent}
-                    renderItem={({ item, index }: { item: any; index: number }) => {
+                    renderItem={({ item, index }: { item: CryptoItem; index: number }) => {
                         const isPositive = (item.price_change_percentage_24h || 0) >= 0;
                         return (
                             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>

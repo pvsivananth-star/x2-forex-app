@@ -1,4 +1,4 @@
-import * as MMKVModule from 'react-native-mmkv';
+import { MMKV } from 'react-native-mmkv';
 
 interface StorageAdapter {
     getString: (key: string) => string | undefined;
@@ -8,15 +8,12 @@ interface StorageAdapter {
 
 const createStorage = (): StorageAdapter => {
     try {
-        const MMKVClass = MMKVModule.MMKV || (MMKVModule as any).default?.MMKV;
-        if (typeof MMKVClass === 'function') {
-            const instance = new MMKVClass();
-            return {
-                getString: (k: string) => instance.getString(k),
-                set: (k: string, v: string) => instance.set(k, v),
-                delete: (k: string) => instance.delete(k),
-            };
-        }
+        const instance = new MMKV();
+        return {
+            getString: (k: string) => instance.getString(k),
+            set: (k: string, v: string) => instance.set(k, v),
+            delete: (k: string) => instance.delete(k),
+        };
     } catch {
         // Fallback if JSI bindings are uninitialized or in Expo/Web
     }
