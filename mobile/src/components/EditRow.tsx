@@ -40,8 +40,6 @@ export const EditRow: React.FC<
          count,
          locked,
          colors,
-         onMove,
-         onRemove,
      }) => {
     const displaySymbol =
         asset.displaySymbol ??
@@ -95,7 +93,8 @@ export const EditRow: React.FC<
                 <TouchableOpacity
                     disabled={
                         locked ||
-                        index === count - 1
+                        index ===
+                        count - 1
                     }
                     onPress={() =>
                         onMove(
@@ -134,6 +133,7 @@ export const EditRow: React.FC<
                             colors.text,
                         },
                     ]}
+                    numberOfLines={1}
                 >
                     {displaySymbol}
                 </Text>
@@ -163,7 +163,9 @@ export const EditRow: React.FC<
                     styles.remove,
                     {
                         opacity:
-                            locked ? 0.25 : 1,
+                            locked
+                                ? 0.25
+                                : 1,
                     },
                 ]}
             >
@@ -186,55 +188,57 @@ export const EditRow: React.FC<
 const styles =
     StyleSheet.create({
         row: {
-            minHeight: 60,
+            minHeight: 46,
+            height: 46,
             flexDirection: 'row',
             alignItems: 'center',
             borderBottomWidth: 1,
-            borderRadius: 8,
-            marginBottom: 3,
+            borderRadius: 7,
+            marginBottom: 2,
         },
 
         arrows: {
-            width: 44,
+            width: 40,
             alignItems: 'center',
+            justifyContent: 'center',
         },
 
         arrowButton: {
-            width: 32,
-            height: 23,
+            width: 30,
+            height: 19,
             alignItems: 'center',
             justifyContent: 'center',
         },
 
         arrow: {
-            fontSize: 17,
+            fontSize: 15,
             fontWeight: '900',
         },
 
         asset: {
             flex: 1,
-            paddingHorizontal: 6,
+            paddingHorizontal: 5,
         },
 
         symbol: {
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: '900',
         },
 
         name: {
-            fontSize: 10,
-            marginTop: 3,
+            fontSize: 9,
+            marginTop: 1,
         },
 
         remove: {
-            width: 48,
-            height: 50,
+            width: 42,
+            height: 42,
             alignItems: 'center',
             justifyContent: 'center',
         },
 
         removeText: {
-            fontSize: 28,
+            fontSize: 25,
             fontWeight: '400',
         },
     });

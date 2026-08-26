@@ -544,40 +544,6 @@ export const MobileApplication: React.FC =
                                         ]
                                 }
                             </Text>
-
-                            <View
-                                style={
-                                    styles.status
-                                }
-                            >
-                                <View
-                                    style={[
-                                        styles.statusDot,
-                                        {
-                                            backgroundColor:
-                                                isOnline
-                                                    ? colors.positive
-                                                    : colors.negative,
-                                        },
-                                    ]}
-                                />
-
-                                <Text
-                                    style={[
-                                        styles.statusText,
-                                        {
-                                            color:
-                                            colors.muted,
-                                        },
-                                    ]}
-                                >
-                                    {isLoading
-                                        ? 'Syncing'
-                                        : isOnline
-                                            ? 'Live'
-                                            : 'Offline'}
-                                </Text>
-                            </View>
                         </View>
 
                         <View
@@ -647,6 +613,29 @@ export const MobileApplication: React.FC =
                                     EDIT
                                 </Text>
                             )}
+                            <View
+                                accessible={true}
+                                accessibilityLabel={
+                                    isOnline
+                                        ? 'Live'
+                                        : 'Offline'
+                                }
+                                accessibilityHint={
+                                    isOnline
+                                        ? 'Market data is connected'
+                                        : 'Market data is offline'
+                                }
+                                accessibilityRole="image"
+                                style={[
+                                    styles.connectionIndicator,
+                                    {
+                                        backgroundColor:
+                                            isOnline
+                                                ? colors.positive
+                                                : colors.negative,
+                                    },
+                                ]}
+                            />
                         </View>
                     </View>
                 </View>
@@ -823,6 +812,8 @@ export const MobileApplication: React.FC =
                                     : styles.marketContent
                             }
                             keyboardShouldPersistTaps="handled"
+                            showsVerticalScrollIndicator={true}
+                            persistentScrollbar={true}
                         >
                             {isEditMode && (
                                 <View
@@ -875,8 +866,12 @@ export const MobileApplication: React.FC =
                                                 visibleAssets.length
                                             }
                                             locked={
-                                                activeTab ===
-                                                'fx' &&
+                                                (
+                                                    activeTab ===
+                                                    'fx' ||
+                                                    activeTab ===
+                                                    'crypto'
+                                                ) &&
                                                 asset.symbol ===
                                                 'USD'
                                             }

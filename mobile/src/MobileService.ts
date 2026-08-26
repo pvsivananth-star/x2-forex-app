@@ -55,7 +55,12 @@ export const TENOR_OPTIONS: Tenor[] = [
 ];
 
 const STORAGE_KEY =
-    '@x2_mobile_settings_v3';
+    '@x2_mobile_settings_v4';
+
+type MarketSnapshot = {
+  rate: number;
+  referenceRate: number;
+};
 
 interface MobileServiceState {
   activeTab: TabCategory;
@@ -91,15 +96,29 @@ interface MobileServiceState {
   assets: Record<string, MarketAsset>;
 
   /*
-   * Explicit user overrides.
+   * Only ONE active manual rate anchor exists.
    *
-   * These survive refresh and tenor changes.
+   * Example:
+   *
+   * EUR = 2
+   *
+   * means every other rate is calculated
+   * relative to the real market EUR rate.
    */
   editedRates: Record<string, number>;
 
   /*
-   * Dynamic CoinGecko catalogue.
+   * Unmodified market/API values.
+   *
+   * Displayed rates are always calculated from
+   * this map, never from another already-adjusted
+   * displayed rate.
    */
+  marketRates: Record<
+      string,
+      MarketSnapshot
+  >;
+
   cryptoCatalog: MarketAsset[];
 
   setActiveTab: (
@@ -169,12 +188,59 @@ function createAssetMap(): Record<
   [
     ...FX_CATALOG,
     ...CRYPTO_DEFAULT_CATALOG,
-    ...METAL_CATALOG,
   ].forEach((asset) => {
     map[asset.symbol] = {
       ...asset,
     };
   });
+
+  /*
+   * Crypto always has a USD row.
+   */
+  map.USD = {
+    symbol: 'USD',
+    name: 'US Dollar',
+    rate: 1,
+    referenceRate: 1,
+    changePct: 0,
+    category: 'crypto',
+  };
+
+  METAL_CATALOG.forEach(
+      (asset) => {
+        map[asset.symbol] = {
+          ...asset,
+        };
+      },
+  );
+
+  return map;
+}
+
+function createInitialMarketRates():
+    Record<string, MarketSnapshot> {
+  const map: Record<
+      string,
+      MarketSnapshot
+  > = {};
+
+  [
+    ...FX_CATALOG,
+    ...CRYPTO_DEFAULT_CATALOG,
+    ...METAL_CATALOG,
+  ].forEach((asset) => {
+    map[asset.symbol] = {
+      rate: asset.rate,
+      referenceRate:
+          asset.referenceRate ??
+          asset.rate,
+    };
+  });
+
+  map.USD = {
+    rate: 1,
+    referenceRate: 1,
+  };
 
   return map;
 }
@@ -204,6 +270,42 @@ function getWatchlist(
   return [];
 }
 
+function getCategoryForSymbol(
+    symbol: string,
+    state: MobileServiceState,
+): 'fx' | 'crypto' | 'metals' | null {
+  if (
+      state.watchlistFx.includes(symbol) ||
+      state.editWatchlistFx.includes(symbol)
+  ) {
+    return 'fx';
+  }
+
+  if (
+      symbol === 'USD' ||
+      state.watchlistCrypto.includes(symbol) ||
+      state.editWatchlistCrypto.includes(symbol)
+  ) {
+    return 'crypto';
+  }
+
+  if (
+      state.watchlistMetals.includes(symbol) ||
+      state.editWatchlistMetals.includes(symbol)
+  ) {
+    return 'metals';
+  }
+
+  const asset =
+      state.assets[symbol];
+
+  if (!asset) {
+    return null;
+  }
+
+  return asset.category;
+}
+
 async function persistState(
     state: MobileServiceState,
 ) {
@@ -214,13 +316,17 @@ async function persistState(
     state.decimalPlaces,
     theme: state.theme,
 
-    watchlistFx: state.watchlistFx,
+    watchlistFx:
+    state.watchlistFx,
+
     watchlistCrypto:
     state.watchlistCrypto,
+
     watchlistMetals:
     state.watchlistMetals,
 
-    editedRates: state.editedRates,
+    editedRates:
+    state.editedRates,
   };
 
   await AsyncStorage.setItem(
@@ -243,11 +349,164 @@ function calculatePercentage(
 
   return Number(
       (
-          ((rate - reference) /
-              reference) *
-          100
+          (
+              (rate - reference) /
+              reference
+          ) * 100
       ).toFixed(2),
   );
+}
+
+function applyAnchor(
+    assets: Record<
+        string,
+        MarketAsset
+    >,
+    marketRates: Record<
+        string,
+        MarketSnapshot
+    >,
+    editedRates: Record<
+        string,
+        number
+    >,
+    category:
+        | 'fx'
+        | 'crypto'
+        | 'metals',
+) {
+  const anchorSymbol =
+      Object.keys(
+          editedRates,
+      )[0];
+
+  if (!anchorSymbol) {
+    return;
+  }
+
+  const anchorAsset =
+      assets[anchorSymbol];
+
+  const anchorMarket =
+      marketRates[anchorSymbol];
+
+  if (
+      !anchorAsset ||
+      !anchorMarket ||
+      anchorAsset.category !==
+      category
+  ) {
+    return;
+  }
+
+  const editedValue =
+      editedRates[
+          anchorSymbol
+          ];
+
+  if (
+      !Number.isFinite(
+          editedValue,
+      ) ||
+      editedValue <= 0 ||
+      !Number.isFinite(
+          anchorMarket.rate,
+      ) ||
+      anchorMarket.rate <= 0
+  ) {
+    return;
+  }
+
+  const scale =
+      editedValue /
+      anchorMarket.rate;
+
+  Object.entries(
+      marketRates,
+  ).forEach(
+      ([symbol, snapshot]) => {
+        const asset =
+            assets[symbol];
+
+        if (
+            !asset ||
+            asset.category !==
+            category
+        ) {
+          return;
+        }
+
+        const displayedRate =
+            snapshot.rate *
+            scale;
+
+        const displayedReference =
+            snapshot.referenceRate *
+            scale;
+
+        assets[symbol] = {
+          ...asset,
+
+          rate:
+          displayedRate,
+
+          referenceRate:
+          displayedReference,
+
+          changePct:
+              calculatePercentage(
+                  displayedRate,
+                  displayedReference,
+              ),
+
+          isCustomEdited:
+              symbol ===
+              anchorSymbol,
+        };
+      },
+  );
+
+  /*
+   * Avoid floating point drift on the
+   * manually entered row.
+   */
+  assets[anchorSymbol] = {
+    ...assets[anchorSymbol],
+    rate: editedValue,
+    isCustomEdited: true,
+    changePct:
+        calculatePercentage(
+            editedValue,
+            anchorMarket.referenceRate *
+            scale,
+        ),
+  };
+}
+
+function normalizeEditedRates(
+    value:
+        | Record<string, number>
+        | undefined,
+): Record<string, number> {
+  if (!value) {
+    return {};
+  }
+
+  /*
+   * Migration from the old implementation:
+   * if several overrides were persisted,
+   * keep only the first one.
+   */
+  const first =
+      Object.entries(value)[0];
+
+  if (!first) {
+    return {};
+  }
+
+  return {
+    [first[0]]: first[1],
+  };
 }
 
 export const useMobileStore =
@@ -276,6 +535,12 @@ export const useMobileStore =
             ...DEFAULT_FX,
           ],
 
+          /*
+           * Crypto starts with:
+           *
+           * USD
+           * BTC
+           */
           watchlistCrypto: [
             ...DEFAULT_CRYPTO,
           ],
@@ -296,64 +561,76 @@ export const useMobileStore =
             ...DEFAULT_METALS,
           ],
 
-          assets: createAssetMap(),
+          assets:
+              createAssetMap(),
 
           editedRates: {},
+
+          marketRates:
+              createInitialMarketRates(),
 
           cryptoCatalog: [
             ...CRYPTO_DEFAULT_CATALOG,
           ],
 
-          setActiveTab: (tab) => {
+          setActiveTab: (
+              tab,
+          ) => {
             set({
               activeTab: tab,
             });
 
             persistState(
                 get(),
-            ).catch(() => undefined);
+            ).catch(
+                () => undefined,
+            );
           },
 
-          setTenor: (tenor) => {
-            /*
-             * Do NOT clear editedRates.
-             *
-             * This is the core fix for:
-             *
-             * 1D -> 1W -> 1M
-             *
-             * edited rates remain exactly as
-             * the user entered them.
-             */
+          setTenor: (
+              tenor,
+          ) => {
             set({
               tenor,
             });
 
             persistState(
                 get(),
-            ).catch(() => undefined);
+            ).catch(
+                () => undefined,
+            );
 
-            void get().forceRefresh();
+            void get()
+                .forceRefresh();
           },
 
-          setDecimalPlaces: (value) => {
+          setDecimalPlaces: (
+              value,
+          ) => {
             set({
-              decimalPlaces: value,
+              decimalPlaces:
+              value,
             });
 
             persistState(
                 get(),
-            ).catch(() => undefined);
+            ).catch(
+                () => undefined,
+            );
           },
 
-          setTheme: (value) => {
+          setTheme: (
+              value,
+          ) => {
             set({
               theme: value,
             });
 
             persistState(
                 get(),
-            ).catch(() => undefined);
+            ).catch(
+                () => undefined,
+            );
           },
 
           updateAssetRate: (
@@ -361,53 +638,69 @@ export const useMobileStore =
               rate,
           ) => {
             if (
-                !Number.isFinite(rate) ||
+                !Number.isFinite(
+                    rate,
+                ) ||
                 rate <= 0
             ) {
               return;
             }
 
-            const state = get();
+            const state =
+                get();
 
             const asset =
-                state.assets[symbol];
+                state.assets[
+                    symbol
+                    ];
 
-            if (!asset) {
+            const market =
+                state.marketRates[
+                    symbol
+                    ];
+
+            if (
+                !asset ||
+                !market
+            ) {
               return;
             }
 
+            /*
+             * The new edit completely replaces
+             * the previous anchor.
+             *
+             * USD -> 2
+             * then EUR -> 2
+             *
+             * leaves only EUR as edited.
+             */
             const editedRates = {
-              ...state.editedRates,
               [symbol]: rate,
             };
 
-            const reference =
-                asset.referenceRate ??
-                asset.rate;
-
-            const updatedAsset: MarketAsset = {
-              ...asset,
-
-              rate,
-
-              isCustomEdited: true,
-
-              changePct:
-                  calculatePercentage(
-                      rate,
-                      reference,
-                  ),
+            const assets = {
+              ...state.assets,
             };
+
+            const category =
+                getCategoryForSymbol(
+                    symbol,
+                    state,
+                );
+
+            if (category) {
+              applyAnchor(
+                  assets,
+                  state.marketRates,
+                  editedRates,
+                  category,
+              );
+            }
 
             set({
               editedRates,
-
-              assets: {
-                ...state.assets,
-
-                [symbol]:
-                updatedAsset,
-              },
+              assets,
             });
 
             persistState({
@@ -421,48 +714,87 @@ export const useMobileStore =
           clearEditedRate: (
               symbol,
           ) => {
-            const state = get();
+            const state =
+                get();
 
-            const editedRates = {
-              ...state.editedRates,
-            };
-
-            delete editedRates[
-                symbol
-                ];
-
-            const asset =
-                state.assets[symbol];
-
-            if (!asset) {
-              set({
-                editedRates,
-              });
-
+            if (
+                !state.editedRates[
+                    symbol
+                    ]
+            ) {
               return;
             }
 
+            const category =
+                getCategoryForSymbol(
+                    symbol,
+                    state,
+                );
+
+            const assets = {
+              ...state.assets,
+            };
+
+            if (category) {
+              Object.entries(
+                  state.marketRates,
+              ).forEach(
+                  ([
+                     itemSymbol,
+                     snapshot,
+                   ]) => {
+                    const asset =
+                        assets[
+                            itemSymbol
+                            ];
+
+                    if (
+                        !asset ||
+                        asset.category !==
+                        category
+                    ) {
+                      return;
+                    }
+
+                    assets[
+                        itemSymbol
+                        ] = {
+                      ...asset,
+
+                      rate:
+                      snapshot.rate,
+
+                      referenceRate:
+                      snapshot.referenceRate,
+
+                      changePct:
+                          calculatePercentage(
+                              snapshot.rate,
+                              snapshot.referenceRate,
+                          ),
+
+                      isCustomEdited:
+                          false,
+                    };
+                  },
+              );
+            }
+
             set({
-              editedRates,
-
-              assets: {
-                ...state.assets,
-
-                [symbol]: {
-                  ...asset,
-                  isCustomEdited:
-                      false,
-                },
-              },
+              editedRates: {},
+              assets,
             });
 
             persistState(
                 get(),
-            ).catch(() => undefined);
+            ).catch(
+                () => undefined,
+            );
           },
 
           startEditing: () => {
-            const state = get();
+            const state =
+                get();
 
             set({
               isEditMode: true,
@@ -482,34 +814,45 @@ export const useMobileStore =
           },
 
           applyEditing: async () => {
-            const state = get();
+            const state =
+                get();
 
-            /*
-             * USD is permanently first.
-             */
             const fx = [
               'USD',
               ...state.editWatchlistFx.filter(
                   (symbol) =>
-                      symbol !== 'USD',
+                      symbol !==
+                      'USD',
+              ),
+            ];
+
+            const crypto = [
+              'USD',
+              ...state.editWatchlistCrypto.filter(
+                  (symbol) =>
+                      symbol !==
+                      'USD',
               ),
             ];
 
             const nextState = {
-              watchlistFx: fx,
+              watchlistFx:
+              fx,
 
-              watchlistCrypto: [
-                ...state.editWatchlistCrypto,
-              ],
+              watchlistCrypto:
+              crypto,
 
               watchlistMetals: [
                 ...state.editWatchlistMetals,
               ],
 
-              isEditMode: false,
+              isEditMode:
+                  false,
             };
 
-            set(nextState);
+            set(
+                nextState,
+            );
 
             await persistState({
               ...get(),
@@ -518,7 +861,8 @@ export const useMobileStore =
           },
 
           cancelEditing: () => {
-            const state = get();
+            const state =
+                get();
 
             set({
               isEditMode: false,
@@ -541,13 +885,17 @@ export const useMobileStore =
               category,
               order,
           ) => {
-            if (category === 'fx') {
+            if (
+                category ===
+                'fx'
+            ) {
               set({
                 editWatchlistFx: [
                   'USD',
                   ...order.filter(
                       (symbol) =>
-                          symbol !== 'USD',
+                          symbol !==
+                          'USD',
                   ),
                 ],
               });
@@ -556,11 +904,17 @@ export const useMobileStore =
             }
 
             if (
-                category === 'crypto'
+                category ===
+                'crypto'
             ) {
               set({
                 editWatchlistCrypto: [
-                  ...order,
+                  'USD',
+                  ...order.filter(
+                      (symbol) =>
+                          symbol !==
+                          'USD',
+                  ),
                 ],
               });
 
@@ -568,7 +922,8 @@ export const useMobileStore =
             }
 
             if (
-                category === 'metals'
+                category ===
+                'metals'
             ) {
               set({
                 editWatchlistMetals: [
@@ -582,7 +937,8 @@ export const useMobileStore =
               category,
               symbol,
           ) => {
-            const state = get();
+            const state =
+                get();
 
             const current =
                 getWatchlist(
@@ -591,7 +947,9 @@ export const useMobileStore =
                 );
 
             if (
-                current.includes(symbol)
+                current.includes(
+                    symbol,
+                )
             ) {
               return;
             }
@@ -601,19 +959,34 @@ export const useMobileStore =
               symbol,
             ];
 
-            if (category === 'fx') {
-              set({
-                editWatchlistFx: next,
-              });
-            } else if (
-                category === 'crypto'
+            if (
+                category ===
+                'fx'
             ) {
               set({
-                editWatchlistCrypto:
+                editWatchlistFx:
                 next,
               });
             } else if (
-                category === 'metals'
+                category ===
+                'crypto'
+            ) {
+              set({
+                editWatchlistCrypto:
+                    [
+                      'USD',
+                      ...next.filter(
+                          (
+                              item,
+                          ) =>
+                              item !==
+                              'USD',
+                      ),
+                    ],
+              });
+            } else if (
+                category ===
+                'metals'
             ) {
               set({
                 editWatchlistMetals:
@@ -627,17 +1000,24 @@ export const useMobileStore =
               symbol,
           ) => {
             /*
-             * USD is the base currency and
-             * cannot be removed.
+             * USD cannot be removed from
+             * FX or Crypto.
              */
             if (
-                category === 'fx' &&
-                symbol === 'USD'
+                (
+                    category ===
+                    'fx' ||
+                    category ===
+                    'crypto'
+                ) &&
+                symbol ===
+                'USD'
             ) {
               return;
             }
 
-            const state = get();
+            const state =
+                get();
 
             const current =
                 getWatchlist(
@@ -648,177 +1028,327 @@ export const useMobileStore =
             const next =
                 current.filter(
                     (item) =>
-                        item !== symbol,
+                        item !==
+                        symbol,
                 );
 
-            if (category === 'fx') {
-              set({
-                editWatchlistFx: next,
-              });
-            } else if (
-                category === 'crypto'
+            if (
+                category ===
+                'fx'
             ) {
               set({
-                editWatchlistCrypto:
+                editWatchlistFx:
                 next,
               });
             } else if (
-                category === 'metals'
+                category ===
+                'crypto'
+            ) {
+              set({
+                editWatchlistCrypto:
+                    [
+                      'USD',
+                      ...next.filter(
+                          (
+                              item,
+                          ) =>
+                              item !==
+                              'USD',
+                      ),
+                    ],
+              });
+            } else if (
+                category ===
+                'metals'
             ) {
               set({
                 editWatchlistMetals:
                 next,
               });
             }
-          },
 
-          forceRefresh: async () => {
+            /*
+             * Removing the active anchor also
+             * removes the manual rate override.
+             */
             if (
-                get().isLoading
+                state.editedRates[
+                    symbol
+                    ]
             ) {
-              return;
-            }
-
-            const state = get();
-
-            set({
-              isLoading: true,
-            });
-
-            try {
-              /*
-               * Only fetch crypto rates for
-               * the currently selected crypto
-               * watchlist.
-               */
-              const [
-                fx,
-                crypto,
-                metals,
-              ] = await Promise.all([
-                fetchFxData(
-                    state.tenor,
-                ),
-
-                fetchCryptoData(
-                    state.tenor,
-                    state.watchlistCrypto,
-                ),
-
-                fetchMetalsData(
-                    state.tenor,
-                ),
-              ]);
-
-              const current =
-                  get();
-
               const assets = {
-                ...current.assets,
+                ...state.assets,
               };
 
-              let receivedData =
-                  false;
+              const marketRates =
+                  state.marketRates;
 
-              const merge = (
-                  data: Record<
-                      string,
-                      {
-                        rate: number;
-                        referenceRate: number;
-                        changePct: number;
-                      }
-                  >,
-              ) => {
-                Object.entries(
-                    data,
-                ).forEach(
-                    ([symbol, value]) => {
-                      const existing =
-                          assets[symbol];
+              Object.entries(
+                  marketRates,
+              ).forEach(
+                  ([
+                     itemSymbol,
+                     snapshot,
+                   ]) => {
+                    const asset =
+                        assets[
+                            itemSymbol
+                            ];
 
-                      /*
-                       * Dynamic crypto asset may
-                       * not yet be in the asset map.
-                       */
-                      if (!existing) {
-                        return;
-                      }
+                    if (
+                        !asset
+                    ) {
+                      return;
+                    }
 
-                      const customRate =
-                          current.editedRates[
-                              symbol
-                              ];
+                    assets[
+                        itemSymbol
+                        ] = {
+                      ...asset,
 
-                      const hasCustomRate =
-                          typeof customRate ===
-                          'number';
+                      rate:
+                      snapshot.rate,
 
-                      const displayedRate =
-                          hasCustomRate
-                              ? customRate
-                              : value.rate;
+                      referenceRate:
+                      snapshot.referenceRate,
 
-                      assets[symbol] = {
-                        ...existing,
+                      changePct:
+                          calculatePercentage(
+                              snapshot.rate,
+                              snapshot.referenceRate,
+                          ),
 
-                        rate:
-                        displayedRate,
-
-                        referenceRate:
-                        value.referenceRate,
-
-                        changePct:
-                            calculatePercentage(
-                                displayedRate,
-                                value.referenceRate,
-                            ),
-
-                        isCustomEdited:
-                        hasCustomRate,
-                      };
-
-                      receivedData = true;
-                    },
-                );
-              };
-
-              merge(fx);
-              merge(crypto);
-              merge(metals);
+                      isCustomEdited:
+                          false,
+                    };
+                  },
+              );
 
               set({
+                editedRates: {},
                 assets,
-
-                lastSynced:
-                    Date.now(),
-
-                countdown:
-                REFRESH_INTERVAL_SECONDS,
-
-                isOnline:
-                receivedData,
-
-                isLoading: false,
-              });
-            } catch {
-              set({
-                isLoading: false,
-
-                isOnline: false,
-
-                countdown:
-                REFRESH_INTERVAL_SECONDS,
               });
             }
           },
+
+          forceRefresh:
+              async () => {
+                if (
+                    get()
+                        .isLoading
+                ) {
+                  return;
+                }
+
+                const state =
+                    get();
+
+                set({
+                  isLoading:
+                      true,
+                });
+
+                try {
+                  /*
+                   * USD is not a CoinGecko coin.
+                   * It is the fixed crypto base row.
+                   */
+                  const cryptoIds =
+                      state.watchlistCrypto.filter(
+                          (symbol) =>
+                              symbol !==
+                              'USD',
+                      );
+
+                  const [
+                    fx,
+                    crypto,
+                    metals,
+                  ] =
+                      await Promise.all([
+                        fetchFxData(
+                            state.tenor,
+                        ),
+
+                        fetchCryptoData(
+                            state.tenor,
+                            cryptoIds,
+                        ),
+
+                        fetchMetalsData(
+                            state.tenor,
+                        ),
+                      ]);
+
+                  const current =
+                      get();
+
+                  const assets = {
+                    ...current.assets,
+                  };
+
+                  const marketRates = {
+                    ...current.marketRates,
+                  };
+
+                  let receivedData =
+                      false;
+
+                  /*
+                   * Crypto USD base.
+                   */
+                  marketRates.USD = {
+                    rate: 1,
+                    referenceRate:
+                        1,
+                  };
+
+                  assets.USD = {
+                    ...assets.USD,
+                    rate: 1,
+                    referenceRate:
+                        1,
+                    changePct: 0,
+                    category:
+                        'crypto',
+                  };
+
+                  const merge = (
+                      data: Record<
+                          string,
+                          {
+                            rate: number;
+                            referenceRate: number;
+                            changePct: number;
+                          }
+                      >,
+                  ) => {
+                    Object.entries(
+                        data,
+                    ).forEach(
+                        ([
+                           symbol,
+                           value,
+                         ]) => {
+                          const existing =
+                              assets[
+                                  symbol
+                                  ];
+
+                          if (
+                              !existing
+                          ) {
+                            return;
+                          }
+
+                          marketRates[
+                              symbol
+                              ] = {
+                            rate:
+                            value.rate,
+
+                            referenceRate:
+                            value.referenceRate,
+                          };
+
+                          assets[
+                              symbol
+                              ] = {
+                            ...existing,
+
+                            rate:
+                            value.rate,
+
+                            referenceRate:
+                            value.referenceRate,
+
+                            changePct:
+                            value.changePct,
+
+                            isCustomEdited:
+                                false,
+                          };
+
+                          receivedData =
+                              true;
+                        },
+                    );
+                  };
+
+                  merge(fx);
+                  merge(crypto);
+                  merge(metals);
+
+                  /*
+                   * Re-apply the single active
+                   * anchor using the NEW market
+                   * rates.
+                   */
+                  const editedRates =
+                      current.editedRates;
+
+                  const anchorSymbol =
+                      Object.keys(
+                          editedRates,
+                      )[0];
+
+                  if (
+                      anchorSymbol
+                  ) {
+                    const anchorAsset =
+                        assets[
+                            anchorSymbol
+                            ];
+
+                    if (
+                        anchorAsset
+                    ) {
+                      applyAnchor(
+                          assets,
+                          marketRates,
+                          editedRates,
+                          anchorAsset.category,
+                      );
+                    }
+                  }
+
+                  set({
+                    assets,
+                    marketRates,
+
+                    lastSynced:
+                        Date.now(),
+
+                    countdown:
+                    REFRESH_INTERVAL_SECONDS,
+
+                    isOnline:
+                    receivedData,
+
+                    isLoading:
+                        false,
+                  });
+                } catch {
+                  set({
+                    isLoading:
+                        false,
+
+                    isOnline:
+                        false,
+
+                    countdown:
+                    REFRESH_INTERVAL_SECONDS,
+                  });
+                }
+              },
 
           tickCountdown: () => {
             const state =
                 get();
 
             if (
-                state.countdown <= 1
+                state.countdown <=
+                1
             ) {
               set({
                 countdown:
@@ -833,7 +1363,8 @@ export const useMobileStore =
 
             set({
               countdown:
-                  state.countdown - 1,
+                  state.countdown -
+                  1,
             });
           },
 
@@ -843,7 +1374,9 @@ export const useMobileStore =
                   const catalog =
                       await fetchCryptoCatalog();
 
-                  if (!catalog.length) {
+                  if (
+                      !catalog.length
+                  ) {
                     return;
                   }
 
@@ -867,9 +1400,11 @@ export const useMobileStore =
                                     ];
 
                             return {
-                              symbol: key,
+                              symbol:
+                              key,
 
-                              id: key,
+                              id:
+                              key,
 
                               displaySymbol:
                               coin.symbol,
@@ -903,9 +1438,33 @@ export const useMobileStore =
                       (asset) => {
                         existingAssets[
                             asset.symbol
-                            ] = asset;
+                            ] =
+                            asset;
                       },
                   );
+
+                  /*
+                   * Keep the fixed USD base.
+                   */
+                  existingAssets.USD = {
+                    symbol:
+                        'USD',
+
+                    name:
+                        'US Dollar',
+
+                    rate:
+                        1,
+
+                    referenceRate:
+                        1,
+
+                    changePct:
+                        0,
+
+                    category:
+                        'crypto',
+                  };
 
                   set({
                     cryptoCatalog:
@@ -915,7 +1474,9 @@ export const useMobileStore =
                     existingAssets,
                   });
                 } catch {
-                  // Keep default crypto catalogue.
+                  /*
+                   * Keep default catalogue.
+                   */
                 }
               },
 
@@ -949,8 +1510,9 @@ export const useMobileStore =
                             : DEFAULT_METALS;
 
                     const editedRates =
-                        saved.editedRates ??
-                        {};
+                        normalizeEditedRates(
+                            saved.editedRates,
+                        );
 
                     set({
                       activeTab:
@@ -972,14 +1534,24 @@ export const useMobileStore =
                       watchlistFx: [
                         'USD',
                         ...fx.filter(
-                            (symbol) =>
+                            (
+                                symbol,
+                            ) =>
                                 symbol !==
                                 'USD',
                         ),
                       ],
 
-                      watchlistCrypto:
-                      crypto,
+                      watchlistCrypto: [
+                        'USD',
+                        ...crypto.filter(
+                            (
+                                symbol,
+                            ) =>
+                                symbol !==
+                                'USD',
+                        ),
+                      ],
 
                       watchlistMetals:
                       metals,
@@ -987,14 +1559,24 @@ export const useMobileStore =
                       editWatchlistFx: [
                         'USD',
                         ...fx.filter(
-                            (symbol) =>
+                            (
+                                symbol,
+                            ) =>
                                 symbol !==
                                 'USD',
                         ),
                       ],
 
-                      editWatchlistCrypto:
-                      crypto,
+                      editWatchlistCrypto: [
+                        'USD',
+                        ...crypto.filter(
+                            (
+                                symbol,
+                            ) =>
+                                symbol !==
+                                'USD',
+                        ),
+                      ],
 
                       editWatchlistMetals:
                       metals,
@@ -1003,21 +1585,14 @@ export const useMobileStore =
                     });
                   }
                 } catch {
-                  // Defaults remain.
+                  /*
+                   * Defaults remain.
+                   */
                 }
 
-                /*
-                 * Load the complete CoinGecko
-                 * catalogue independently from
-                 * market-price refresh.
-                 */
                 await get()
                     .loadCryptoCatalog();
 
-                /*
-                 * Re-apply persisted edited rates
-                 * to the current asset map.
-                 */
                 const state =
                     get();
 
@@ -1030,34 +1605,42 @@ export const useMobileStore =
                     ...state.assets,
                   };
 
-                  Object.entries(
-                      state.editedRates,
-                  ).forEach(
-                      ([symbol, rate]) => {
-                        const asset =
-                            assets[symbol];
+                  const anchorSymbol =
+                      Object.keys(
+                          state.editedRates,
+                      )[0];
 
-                        if (!asset) {
-                          return;
-                        }
+                  const anchorValue =
+                      state.editedRates[
+                          anchorSymbol
+                          ];
 
-                        assets[symbol] = {
-                          ...asset,
+                  const market =
+                      state.marketRates[
+                          anchorSymbol
+                          ];
 
-                          rate,
+                  if (
+                      market &&
+                      anchorValue
+                  ) {
+                    const category =
+                        getCategoryForSymbol(
+                            anchorSymbol,
+                            state,
+                        );
 
-                          isCustomEdited:
-                              true,
-
-                          changePct:
-                              calculatePercentage(
-                                  rate,
-                                  asset.referenceRate ??
-                                  rate,
-                              ),
-                        };
-                      },
-                  );
+                    if (
+                        category
+                    ) {
+                      applyAnchor(
+                          assets,
+                          state.marketRates,
+                          state.editedRates,
+                          category,
+                      );
+                    }
+                  }
 
                   set({
                     assets,
@@ -1065,7 +1648,8 @@ export const useMobileStore =
                 }
 
                 set({
-                  isOnline: true,
+                  isOnline:
+                      true,
 
                   lastSynced:
                       Date.now(),

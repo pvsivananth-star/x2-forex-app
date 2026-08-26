@@ -47,11 +47,6 @@ export const MarketRow: React.FC<
             decimalPlaces,
         );
 
-    /*
-     * The draft belongs to THIS row only.
-     * This prevents editing one rate from
-     * modifying/replacing another input.
-     */
     const [draft, setDraft] =
         useState(formatted);
 
@@ -61,23 +56,18 @@ export const MarketRow: React.FC<
     const lastCommittedRate =
         useRef(asset.rate);
 
-    /*
-     * When API/tenor changes the actual
-     * asset rate, update the input only if
-     * the user is not currently editing it.
-     */
     useEffect(() => {
-        if (
-            !focused &&
-            asset.rate !==
-            lastCommittedRate.current
-        ) {
+        if (!focused) {
             const next =
                 asset.rate.toFixed(
                     decimalPlaces,
                 );
 
-            setDraft(next);
+            if (
+                next !== draft
+            ) {
+                setDraft(next);
+            }
 
             lastCommittedRate.current =
                 asset.rate;
@@ -106,9 +96,6 @@ export const MarketRow: React.FC<
             return;
         }
 
-        /*
-         * Only this row is committed.
-         */
         onCommit(
             asset.symbol,
             trimmed,
@@ -206,6 +193,11 @@ export const MarketRow: React.FC<
                                 asset.isCustomEdited
                                     ? colors.warning
                                     : colors.border,
+
+                            borderWidth:
+                                asset.isCustomEdited
+                                    ? 1.5
+                                    : 1,
                         },
                     ]}
                     accessibilityLabel={
@@ -246,7 +238,8 @@ export const MarketRow: React.FC<
 const styles =
     StyleSheet.create({
         row: {
-            minHeight: 62,
+            minHeight: 48,
+            height: 48,
             flexDirection: 'row',
             alignItems: 'center',
             borderBottomWidth: 1,
@@ -254,7 +247,7 @@ const styles =
 
         assetColumn: {
             flex: 2,
-            paddingRight: 8,
+            paddingRight: 6,
         },
 
         rateColumn: {
@@ -268,28 +261,28 @@ const styles =
         },
 
         symbol: {
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: '900',
         },
 
         name: {
-            fontSize: 10,
-            marginTop: 3,
+            fontSize: 9,
+            marginTop: 1,
         },
 
         input: {
             minWidth: 88,
-            borderWidth: 1,
+            height: 34,
             borderRadius: 8,
             paddingHorizontal: 8,
-            paddingVertical: 6,
+            paddingVertical: 3,
             textAlign: 'right',
             fontSize: 13,
             fontWeight: '800',
         },
 
         change: {
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: '900',
         },
     });

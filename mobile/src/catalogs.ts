@@ -283,11 +283,10 @@ export const CRYPTO_DEFAULT_CATALOG: MarketAsset[] = [
     },
 ];
 
-export const DEFAULT_CRYPTO =
-    CRYPTO_DEFAULT_CATALOG.map(
-        (asset) =>
-            asset.symbol,
-    );
+export const DEFAULT_CRYPTO = [
+    'USD',
+    'bitcoin',
+];
 
 export const METAL_CATALOG: MarketAsset[] = [
     {
@@ -394,9 +393,7 @@ export function getStaticCatalog(
         return FX_CATALOG;
     }
 
-    if (
-        category === 'metals'
-    ) {
+    if (category === 'metals') {
         return METAL_CATALOG;
     }
 

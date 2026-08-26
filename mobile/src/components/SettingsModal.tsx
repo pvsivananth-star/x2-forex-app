@@ -309,12 +309,10 @@ export const SettingsModal: React.FC<
                             },
                         ]}
                     >
-                        Pure indicative rates
-                        and cannot be used for
-                        trading. Any losses
-                        does not tie up to any
-                        legal matters with the
-                        developer.
+                        Disclaimer: Exchange rates provided in this app are for informational and indicative purposes only
+                        and do not constitute real-time quotes for trading or financial transactions.
+                        The developer assumes no legal liability or responsibility for any financial losses,
+                        damages, or decisions made based on the data provided herein.
                     </Text>
 
                     <TouchableOpacity
