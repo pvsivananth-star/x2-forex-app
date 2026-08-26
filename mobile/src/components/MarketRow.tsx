@@ -1,4 +1,8 @@
-import React from 'react';
+import React, {
+    useEffect,
+    useRef,
+    useState,
+} from 'react';
 
 import {
     StyleSheet,
@@ -19,12 +23,6 @@ interface MarketRowProps {
     asset: MarketAsset;
     decimalPlaces: number;
     colors: AppColors;
-    draftValue?: string;
-
-    onDraftChange: (
-        symbol: string,
-        value: string,
-    ) => void;
 
     onCommit: (
         symbol: string,
@@ -38,8 +36,6 @@ export const MarketRow: React.FC<
          asset,
          decimalPlaces,
          colors,
-         draftValue,
-         onDraftChange,
          onCommit,
      }) => {
     const displaySymbol =
@@ -51,9 +47,82 @@ export const MarketRow: React.FC<
             decimalPlaces,
         );
 
-    const value =
-        draftValue ??
-        formatted;
+    /*
+     * The draft belongs to THIS row only.
+     * This prevents editing one rate from
+     * modifying/replacing another input.
+     */
+    const [draft, setDraft] =
+        useState(formatted);
+
+    const [focused, setFocused] =
+        useState(false);
+
+    const lastCommittedRate =
+        useRef(asset.rate);
+
+    /*
+     * When API/tenor changes the actual
+     * asset rate, update the input only if
+     * the user is not currently editing it.
+     */
+    useEffect(() => {
+        if (
+            !focused &&
+            asset.rate !==
+            lastCommittedRate.current
+        ) {
+            const next =
+                asset.rate.toFixed(
+                    decimalPlaces,
+                );
+
+            setDraft(next);
+
+            lastCommittedRate.current =
+                asset.rate;
+        }
+    }, [
+        asset.rate,
+        decimalPlaces,
+        focused,
+    ]);
+
+    const commit = (
+        value: string,
+    ) => {
+        const trimmed =
+            value.trim();
+
+        const parsed =
+            Number(trimmed);
+
+        if (
+            !trimmed ||
+            !Number.isFinite(parsed) ||
+            parsed <= 0
+        ) {
+            setDraft(formatted);
+            return;
+        }
+
+        /*
+         * Only this row is committed.
+         */
+        onCommit(
+            asset.symbol,
+            trimmed,
+        );
+
+        lastCommittedRate.current =
+            parsed;
+
+        setDraft(
+            parsed.toFixed(
+                decimalPlaces,
+            ),
+        );
+    };
 
     const positive =
         asset.changePct >= 0;
@@ -69,7 +138,9 @@ export const MarketRow: React.FC<
             ]}
         >
             <View
-                style={styles.assetColumn}
+                style={
+                    styles.assetColumn
+                }
             >
                 <Text
                     style={[
@@ -99,28 +170,26 @@ export const MarketRow: React.FC<
             </View>
 
             <View
-                style={styles.rateColumn}
+                style={
+                    styles.rateColumn
+                }
             >
                 <TextInput
-                    value={value}
-                    onChangeText={(text) =>
-                        onDraftChange(
-                            asset.symbol,
-                            text,
-                        )
+                    value={draft}
+                    onFocus={() =>
+                        setFocused(true)
                     }
-                    onBlur={() =>
-                        onCommit(
-                            asset.symbol,
-                            value,
-                        )
+                    onChangeText={
+                        setDraft
                     }
-                    onSubmitEditing={() =>
-                        onCommit(
-                            asset.symbol,
-                            value,
-                        )
-                    }
+                    onBlur={() => {
+                        setFocused(false);
+                        commit(draft);
+                    }}
+                    onSubmitEditing={() => {
+                        setFocused(false);
+                        commit(draft);
+                    }}
                     selectTextOnFocus
                     keyboardType="decimal-pad"
                     returnKeyType="done"
@@ -128,7 +197,7 @@ export const MarketRow: React.FC<
                         styles.input,
                         {
                             color:
-                            colors.accent,
+                            colors.text,
 
                             backgroundColor:
                             colors.surface,
@@ -139,20 +208,25 @@ export const MarketRow: React.FC<
                                     : colors.border,
                         },
                     ]}
-                    accessibilityLabel={`Rate for ${displaySymbol}`}
+                    accessibilityLabel={
+                        `Rate for ${displaySymbol}`
+                    }
                 />
             </View>
 
             <View
-                style={styles.changeColumn}
+                style={
+                    styles.changeColumn
+                }
             >
                 <Text
                     style={[
                         styles.change,
                         {
-                            color: positive
-                                ? colors.positive
-                                : colors.negative,
+                            color:
+                                positive
+                                    ? colors.positive
+                                    : colors.negative,
                         },
                     ]}
                 >

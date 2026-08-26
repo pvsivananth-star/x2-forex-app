@@ -1,8 +1,10 @@
-import React from 'react';
+import React, {
+    useMemo,
+} from 'react';
 
 import {
+    FlatList,
     Modal,
-    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -61,25 +63,34 @@ export const AssetPickerModal: React.FC<
             .toLowerCase();
 
     const filtered =
-        !query
-            ? assets.slice(0, 50)
-            : assets
-                .filter(
-                    (asset) =>
-                        asset.name
-                            .toLowerCase()
-                            .includes(query) ||
-                        (
-                            asset.displaySymbol ??
-                            asset.symbol
-                        )
-                            .toLowerCase()
-                            .includes(query) ||
+        useMemo(() => {
+            if (!query) {
+                return assets;
+            }
+
+            return assets.filter(
+                (asset) =>
+                    asset.name
+                        .toLowerCase()
+                        .includes(query) ||
+                    (
+                        asset.displaySymbol ??
                         asset.symbol
-                            .toLowerCase()
-                            .includes(query),
-                )
-                .slice(0, 100);
+                    )
+                        .toLowerCase()
+                        .includes(
+                            query,
+                        ) ||
+                    asset.symbol
+                        .toLowerCase()
+                        .includes(
+                            query,
+                        ),
+            );
+        }, [
+            assets,
+            query,
+        ]);
 
     return (
         <Modal
@@ -112,19 +123,41 @@ export const AssetPickerModal: React.FC<
                     ]}
                 >
                     <View
-                        style={styles.header}
+                        style={
+                            styles.header
+                        }
                     >
-                        <Text
-                            style={[
-                                styles.title,
-                                {
-                                    color:
-                                    colors.text,
-                                },
-                            ]}
+                        <View
+                            style={
+                                styles.headerText
+                            }
                         >
-                            {title}
-                        </Text>
+                            <Text
+                                style={[
+                                    styles.title,
+                                    {
+                                        color:
+                                        colors.text,
+                                    },
+                                ]}
+                            >
+                                {title}
+                            </Text>
+
+                            <Text
+                                style={[
+                                    styles.count,
+                                    {
+                                        color:
+                                        colors.dim,
+                                    },
+                                ]}
+                            >
+                                {query
+                                    ? `${filtered.length} matches`
+                                    : `${assets.length} available`}
+                            </Text>
+                        </View>
 
                         <TouchableOpacity
                             onPress={
@@ -172,118 +205,117 @@ export const AssetPickerModal: React.FC<
                         ]}
                     />
 
-                    <Text
-                        style={[
-                            styles.matching,
-                            {
-                                color:
-                                colors.dim,
-                            },
-                        ]}
-                    >
-                        {query
-                            ? `${filtered.length} matches`
-                            : 'Available assets'}
-                    </Text>
-
-                    <ScrollView
-                        style={styles.results}
+                    <FlatList
+                        data={filtered}
+                        keyExtractor={(
+                            item,
+                        ) =>
+                            item.symbol
+                        }
+                        style={
+                            styles.results
+                        }
                         keyboardShouldPersistTaps="handled"
-                    >
-                        {filtered.map(
-                            (asset) => {
-                                const symbol =
-                                    asset.symbol;
+                        initialNumToRender={
+                            40
+                        }
+                        maxToRenderPerBatch={
+                            40
+                        }
+                        windowSize={8}
+                        removeClippedSubviews
+                        renderItem={({
+                                         item,
+                                     }) => {
+                            const symbol =
+                                item.symbol;
 
-                                const alreadySelected =
-                                    selected.includes(
-                                        symbol,
-                                    );
+                            const alreadySelected =
+                                selected.includes(
+                                    symbol,
+                                );
 
-                                const displaySymbol =
-                                    asset.displaySymbol ??
-                                    symbol;
+                            const displaySymbol =
+                                item.displaySymbol ??
+                                symbol;
 
-                                return (
-                                    <TouchableOpacity
-                                        key={symbol}
-                                        disabled={
-                                            alreadySelected
+                            return (
+                                <TouchableOpacity
+                                    disabled={
+                                        alreadySelected
+                                    }
+                                    onPress={() =>
+                                        onSelect(
+                                            symbol,
+                                        )
+                                    }
+                                    style={[
+                                        styles.result,
+                                        {
+                                            borderBottomColor:
+                                            colors.border,
+
+                                            opacity:
+                                                alreadySelected
+                                                    ? 0.4
+                                                    : 1,
+                                        },
+                                    ]}
+                                >
+                                    <View
+                                        style={
+                                            styles.resultText
                                         }
-                                        onPress={() =>
-                                            onSelect(
-                                                symbol,
-                                            )
-                                        }
-                                        style={[
-                                            styles.result,
-                                            {
-                                                borderBottomColor:
-                                                colors.border,
-
-                                                opacity:
-                                                    alreadySelected
-                                                        ? 0.4
-                                                        : 1,
-                                            },
-                                        ]}
                                     >
-                                        <View
-                                            style={
-                                                styles.resultText
+                                        <Text
+                                            style={[
+                                                styles.symbol,
+                                                {
+                                                    color:
+                                                    colors.text,
+                                                },
+                                            ]}
+                                        >
+                                            {
+                                                displaySymbol
+                                            }
+                                        </Text>
+
+                                        <Text
+                                            style={[
+                                                styles.name,
+                                                {
+                                                    color:
+                                                    colors.muted,
+                                                },
+                                            ]}
+                                            numberOfLines={
+                                                1
                                             }
                                         >
-                                            <Text
-                                                style={[
-                                                    styles.symbol,
-                                                    {
-                                                        color:
-                                                        colors.text,
-                                                    },
-                                                ]}
-                                            >
+                                            {
+                                                item.name
+                                            }
+                                        </Text>
+                                    </View>
+
+                                    {alreadySelected && (
+                                        <Text
+                                            style={[
+                                                styles.added,
                                                 {
-                                                    displaySymbol
-                                                }
-                                            </Text>
-
-                                            <Text
-                                                style={[
-                                                    styles.name,
-                                                    {
-                                                        color:
-                                                        colors.muted,
-                                                    },
-                                                ]}
-                                                numberOfLines={
-                                                    1
-                                                }
-                                            >
-                                                {
-                                                    asset.name
-                                                }
-                                            </Text>
-                                        </View>
-
-                                        {alreadySelected && (
-                                            <Text
-                                                style={[
-                                                    styles.added,
-                                                    {
-                                                        color:
-                                                        colors.positive,
-                                                    },
-                                                ]}
-                                            >
-                                                Added
-                                            </Text>
-                                        )}
-                                    </TouchableOpacity>
-                                );
-                            },
-                        )}
-
-                        {!filtered.length && (
+                                                    color:
+                                                    colors.positive,
+                                                },
+                                            ]}
+                                        >
+                                            Added
+                                        </Text>
+                                    )}
+                                </TouchableOpacity>
+                            );
+                        }}
+                        ListEmptyComponent={
                             <Text
                                 style={[
                                     styles.empty,
@@ -295,11 +327,13 @@ export const AssetPickerModal: React.FC<
                             >
                                 No matching assets
                             </Text>
-                        )}
-                    </ScrollView>
+                        }
+                    />
 
                     <TouchableOpacity
-                        onPress={onClose}
+                        onPress={
+                            onClose
+                        }
                         style={[
                             styles.cancel,
                             {
@@ -330,13 +364,14 @@ const styles =
         backdrop: {
             flex: 1,
             alignItems: 'center',
-            justifyContent: 'center',
+            justifyContent:
+                'center',
             padding: 18,
         },
 
         modal: {
             width: '100%',
-            maxHeight: '86%',
+            height: '88%',
             borderRadius: 16,
             borderWidth: 1,
             padding: 16,
@@ -347,12 +382,22 @@ const styles =
             alignItems: 'center',
             justifyContent:
                 'space-between',
-            marginBottom: 14,
+            marginBottom: 12,
+        },
+
+        headerText: {
+            flex: 1,
         },
 
         title: {
             fontSize: 18,
             fontWeight: '900',
+        },
+
+        count: {
+            fontSize: 10,
+            marginTop: 3,
+            fontWeight: '700',
         },
 
         close: {
@@ -366,19 +411,11 @@ const styles =
             paddingHorizontal: 12,
             paddingVertical: 10,
             fontSize: 14,
-        },
-
-        matching: {
-            fontSize: 10,
-            fontWeight: '900',
-            textTransform:
-                'uppercase',
-            marginTop: 15,
-            marginBottom: 5,
+            marginBottom: 8,
         },
 
         results: {
-            maxHeight: 430,
+            flex: 1,
         },
 
         result: {
@@ -418,7 +455,7 @@ const styles =
 
         cancel: {
             alignSelf: 'flex-end',
-            marginTop: 14,
+            marginTop: 10,
             paddingHorizontal: 18,
             paddingVertical: 9,
             borderWidth: 1,

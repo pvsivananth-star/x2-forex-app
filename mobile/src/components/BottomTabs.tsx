@@ -1,4 +1,5 @@
 import React from 'react';
+
 import {
     StyleSheet,
     Text,
@@ -8,12 +9,18 @@ import {
 
 import {
     TabCategory,
-} from '../MobileService';
+} from '../types';
+
+import {
+    AppColors,
+} from '../theme';
 
 interface BottomTabsProps {
     activeTab: TabCategory;
-    colors: any;
-    onChange: (tab: TabCategory) => void;
+    colors: AppColors;
+    onChange: (
+        tab: TabCategory,
+    ) => void;
 }
 
 const TABS: {
@@ -24,7 +31,7 @@ const TABS: {
     {
         key: 'fx',
         label: 'Forex',
-        icon: '💱',
+        icon: 'FX',
     },
     {
         key: 'crypto',
@@ -34,12 +41,12 @@ const TABS: {
     {
         key: 'metals',
         label: 'Metals',
-        icon: '🪙',
+        icon: 'Ag',
     },
     {
         key: 'portfolio',
         label: 'Portfolio',
-        icon: '📊',
+        icon: '▦',
     },
 ];
 
@@ -49,87 +56,131 @@ export const BottomTabs: React.FC<
          activeTab,
          colors,
          onChange,
-     }) => {
-    return (
-        <View
-            style={[
-                styles.container,
-                {
-                    backgroundColor: colors.surface,
-                    borderTopColor: colors.border,
-                },
-            ]}
-        >
-            {TABS.map((tab) => {
+     }) => (
+    <View
+        style={[
+            styles.container,
+            {
+                backgroundColor:
+                colors.surface,
+
+                borderTopColor:
+                colors.border,
+            },
+        ]}
+    >
+        {TABS.map(
+            (tab) => {
                 const active =
-                    activeTab === tab.key;
+                    activeTab ===
+                    tab.key;
 
                 return (
                     <TouchableOpacity
-                        key={tab.key}
+                        key={
+                            tab.key
+                        }
                         accessibilityRole="tab"
                         accessibilityState={{
-                            selected: active,
+                            selected:
+                            active,
                         }}
                         onPress={() =>
-                            onChange(tab.key)
+                            onChange(
+                                tab.key,
+                            )
                         }
-                        style={[
-                            styles.tab,
-                            active && {
-                                backgroundColor:
-                                colors.accentStrong,
-                            },
-                        ]}
+                        style={
+                            styles.tab
+                        }
                     >
-                        <Text style={styles.icon}>
-                            {tab.icon}
-                        </Text>
+                        <View
+                            style={[
+                                styles.iconContainer,
+                                {
+                                    backgroundColor:
+                                        active
+                                            ? colors.accentStrong
+                                            : 'transparent',
+                                },
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.icon,
+                                    {
+                                        color:
+                                            active
+                                                ? '#FFFFFF'
+                                                : colors.muted,
+                                    },
+                                ]}
+                            >
+                                {
+                                    tab.icon
+                                }
+                            </Text>
+                        </View>
 
                         <Text
                             style={[
                                 styles.label,
                                 {
-                                    color: active
-                                        ? '#ffffff'
-                                        : colors.muted,
+                                    color:
+                                        active
+                                            ? colors.accent
+                                            : colors.muted,
                                 },
                             ]}
                         >
-                            {tab.label}
+                            {
+                                tab.label
+                            }
                         </Text>
                     </TouchableOpacity>
                 );
-            })}
-        </View>
-    );
-};
+            },
+        )}
+    </View>
+);
 
-const styles = StyleSheet.create({
-    container: {
-        flexDirection: 'row',
-        borderTopWidth: 1,
-        paddingHorizontal: 6,
-        paddingTop: 5,
-        paddingBottom: 5,
-    },
+const styles =
+    StyleSheet.create({
+        container: {
+            flexDirection:
+                'row',
+            borderTopWidth: 1,
+            paddingHorizontal: 8,
+            paddingTop: 6,
+            paddingBottom: 7,
+        },
 
-    tab: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: 9,
-        paddingVertical: 5,
-        marginHorizontal: 2,
-    },
+        tab: {
+            flex: 1,
+            alignItems:
+                'center',
+            justifyContent:
+                'center',
+        },
 
-    icon: {
-        fontSize: 16,
-        marginBottom: 2,
-    },
+        iconContainer: {
+            width: 32,
+            height: 26,
+            borderRadius: 8,
+            alignItems:
+                'center',
+            justifyContent:
+                'center',
+        },
 
-    label: {
-        fontSize: 10,
-        fontWeight: '800',
-    },
-});
+        icon: {
+            fontSize: 14,
+            fontWeight: '900',
+        },
+
+        label: {
+            fontSize: 10,
+            fontWeight: '800',
+            marginTop: 2,
+        },
+    });

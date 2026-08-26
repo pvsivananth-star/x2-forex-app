@@ -1,4 +1,5 @@
 import React from 'react';
+
 import {
     StyleSheet,
     TouchableOpacity,
@@ -14,7 +15,7 @@ interface RefreshTimerProps {
     onPress: () => void;
 }
 
-const DOT_COUNT = 16;
+const SEGMENTS = 24;
 
 export const RefreshTimer: React.FC<
     RefreshTimerProps
@@ -27,13 +28,24 @@ export const RefreshTimer: React.FC<
          onPress,
      }) => {
     const progress =
-        1 -
-        countdown /
-        Math.max(totalSeconds, 1);
+        Math.max(
+            0,
+            Math.min(
+                1,
+                1 -
+                countdown /
+                Math.max(
+                    totalSeconds,
+                    1,
+                ),
+            ),
+        );
 
-    const filledCount = Math.round(
-        progress * DOT_COUNT,
-    );
+    const filled =
+        Math.round(
+            progress *
+            SEGMENTS,
+        );
 
     return (
         <TouchableOpacity
@@ -44,7 +56,10 @@ export const RefreshTimer: React.FC<
             style={[
                 styles.button,
                 {
-                    opacity: disabled ? 0.45 : 1,
+                    opacity:
+                        disabled
+                            ? 0.45
+                            : 1,
                 },
             ]}
         >
@@ -58,41 +73,57 @@ export const RefreshTimer: React.FC<
                 ]}
             >
                 {Array.from({
-                    length: DOT_COUNT,
-                }).map((_, index) => {
-                    const angle =
-                        (index / DOT_COUNT) *
-                        360;
+                    length: SEGMENTS,
+                }).map(
+                    (_, index) => {
+                        const angle =
+                            (index /
+                                SEGMENTS) *
+                            360;
 
-                    const active =
-                        index < filledCount;
+                        const active =
+                            index <
+                            filled;
 
-                    return (
-                        <View
-                            key={index}
-                            style={[
-                                styles.dot,
-                                {
-                                    backgroundColor:
-                                        active
-                                            ? color
-                                            : backgroundColor,
+                        return (
+                            <View
+                                key={
+                                    index
+                                }
+                                style={[
+                                    styles.segment,
+                                    {
+                                        backgroundColor:
+                                            active
+                                                ? color
+                                                : backgroundColor,
 
-                                    transform: [
-                                        {
-                                            rotate:
-                                                `${angle}deg`,
-                                        },
-                                        {
-                                            translateY:
-                                                -11,
-                                        },
-                                    ],
-                                },
-                            ]}
-                        />
-                    );
-                })}
+                                        transform: [
+                                            {
+                                                rotate:
+                                                    `${angle}deg`,
+                                            },
+                                            {
+                                                translateY:
+                                                    -10,
+                                            },
+                                        ],
+                                    },
+                                ]}
+                            />
+                        );
+                    },
+                )}
+
+                <View
+                    style={[
+                        styles.inner,
+                        {
+                            backgroundColor:
+                            backgroundColor,
+                        },
+                    ]}
+                />
             </View>
         </TouchableOpacity>
     );
@@ -101,25 +132,33 @@ export const RefreshTimer: React.FC<
 const styles =
     StyleSheet.create({
         button: {
-            width: 32,
-            height: 32,
+            width: 30,
+            height: 30,
             alignItems: 'center',
-            justifyContent: 'center',
+            justifyContent:
+                'center',
         },
 
         ring: {
-            width: 27,
-            height: 27,
-            borderRadius: 14,
+            width: 25,
+            height: 25,
+            borderRadius: 13,
             borderWidth: 1,
             alignItems: 'center',
-            justifyContent: 'center',
+            justifyContent:
+                'center',
         },
 
-        dot: {
+        segment: {
             position: 'absolute',
-            width: 4,
-            height: 4,
-            borderRadius: 2,
+            width: 2.5,
+            height: 6,
+            borderRadius: 1.5,
+        },
+
+        inner: {
+            width: 17,
+            height: 17,
+            borderRadius: 9,
         },
     });

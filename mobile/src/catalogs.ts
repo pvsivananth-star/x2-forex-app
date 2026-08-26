@@ -11,20 +11,8 @@ export const TENOR_OPTIONS = [
     '1Y',
 ] as const;
 
-export const REFRESH_INTERVAL_SECONDS = 180;
-
-export const G10_CODES = [
-    'USD',
-    'EUR',
-    'JPY',
-    'GBP',
-    'CAD',
-    'AUD',
-    'CHF',
-    'CNY',
-    'SEK',
-    'NOK',
-];
+export const REFRESH_INTERVAL_SECONDS =
+    180;
 
 export const FX_CATALOG: MarketAsset[] = [
     {
@@ -297,7 +285,8 @@ export const CRYPTO_DEFAULT_CATALOG: MarketAsset[] = [
 
 export const DEFAULT_CRYPTO =
     CRYPTO_DEFAULT_CATALOG.map(
-        (asset) => asset.symbol,
+        (asset) =>
+            asset.symbol,
     );
 
 export const METAL_CATALOG: MarketAsset[] = [
@@ -385,7 +374,8 @@ export const METAL_CATALOG: MarketAsset[] = [
 
 export const DEFAULT_METALS =
     METAL_CATALOG.map(
-        (asset) => asset.symbol,
+        (asset) =>
+            asset.symbol,
     );
 
 export const ALL_STATIC_CATALOG = [
@@ -404,7 +394,9 @@ export function getStaticCatalog(
         return FX_CATALOG;
     }
 
-    if (category === 'metals') {
+    if (
+        category === 'metals'
+    ) {
         return METAL_CATALOG;
     }
 

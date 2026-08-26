@@ -18,42 +18,86 @@ export interface AppColors {
     overlay: string;
 }
 
-export const DARK_COLORS: AppColors = {
-    background: '#0B1220',
-    surface: '#111A2B',
-    surfaceElevated: '#172238',
-    border: '#26354D',
+export const DARK_COLORS:
+    AppColors = {
+    background:
+        '#0A0F18',
 
-    text: '#F5F7FA',
-    muted: '#A8B3C5',
-    dim: '#738198',
+    surface:
+        '#111827',
 
-    accent: '#4EA7FF',
-    accentStrong: '#2477C5',
+    surfaceElevated:
+        '#172033',
 
-    positive: '#20C997',
-    negative: '#FF5C6C',
-    warning: '#F2B84B',
+    border:
+        '#273449',
 
-    overlay: 'rgba(0,0,0,0.70)',
+    text:
+        '#F4F7FB',
+
+    muted:
+        '#A8B3C2',
+
+    dim:
+        '#718096',
+
+    accent:
+        '#4DA3FF',
+
+    accentStrong:
+        '#216EAF',
+
+    positive:
+        '#19B88A',
+
+    negative:
+        '#EF5969',
+
+    warning:
+        '#D9A441',
+
+    overlay:
+        'rgba(0,0,0,0.72)',
 };
 
-export const LIGHT_COLORS: AppColors = {
-    background: '#F4F7FB',
-    surface: '#FFFFFF',
-    surfaceElevated: '#F8FAFD',
-    border: '#DCE4EF',
+export const LIGHT_COLORS:
+    AppColors = {
+    background:
+        '#F3F6FA',
 
-    text: '#172033',
-    muted: '#536176',
-    dim: '#7A879A',
+    surface:
+        '#FFFFFF',
 
-    accent: '#1769AA',
-    accentStrong: '#155A91',
+    surfaceElevated:
+        '#F8FAFC',
 
-    positive: '#078A67',
-    negative: '#D9364F',
-    warning: '#B77900',
+    border:
+        '#D9E1EB',
 
-    overlay: 'rgba(15,23,42,0.55)',
+    text:
+        '#172033',
+
+    muted:
+        '#526174',
+
+    dim:
+        '#7A8798',
+
+    accent:
+        '#1769AA',
+
+    accentStrong:
+        '#155A91',
+
+    positive:
+        '#078A67',
+
+    negative:
+        '#D9364F',
+
+    warning:
+        '#A86F00',
+
+    overlay:
+        'rgba(15,23,42,0.58)',
 };
