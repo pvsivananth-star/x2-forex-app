@@ -1,447 +1,1081 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import { fetchFxData, fetchCryptoData, fetchMetalsData } from './ratesApi';
 
-export interface MarketAsset {
-  symbol: string;
-  name: string;
-  rate: number;
-  changePct: number;
-  category: 'fx' | 'crypto' | 'metals';
-  isCustomEdited?: boolean;
-}
+import {
+  DEFAULT_CRYPTO,
+  DEFAULT_FX,
+  DEFAULT_METALS,
+  FX_CATALOG,
+  METAL_CATALOG,
+  CRYPTO_DEFAULT_CATALOG,
+  REFRESH_INTERVAL_SECONDS,
+} from './catalogs';
 
-export type TabCategory = 'fx' | 'crypto' | 'metals' | 'portfolio';
-export type Tenor = '1D' | '1W' | '1M' | '3M' | '6M' | '1Y';
-export const TENOR_OPTIONS: Tenor[] = ['1D', '1W', '1M', '3M', '6M', '1Y'];
-export type DecimalPlaces = 2 | 3 | 4;
-export type ThemePreference = 'system' | 'light' | 'dark';
+import {
+  fetchCryptoCatalog,
+  fetchCryptoData,
+  fetchFxData,
+  fetchMetalsData,
+} from './ratesApi';
 
-export const REFRESH_INTERVAL_SECONDS = 180;
+import {
+  DecimalPlaces,
+  MarketAsset,
+  PersistedSettings,
+  TabCategory,
+  Tenor,
+  ThemePreference,
+} from './types';
 
-export const G10_CODES = [
-  'USD', 'EUR', 'JPY', 'GBP', 'CAD',
-  'AUD', 'CHF', 'CNY', 'SEK', 'NOK',
+export type {
+  DecimalPlaces,
+  MarketAsset,
+  TabCategory,
+  Tenor,
+  ThemePreference,
+};
+
+export {
+  DEFAULT_CRYPTO,
+  DEFAULT_FX,
+  DEFAULT_METALS,
+  FX_CATALOG,
+  METAL_CATALOG,
+  CRYPTO_DEFAULT_CATALOG,
+  REFRESH_INTERVAL_SECONDS,
+};
+
+export const TENOR_OPTIONS: Tenor[] = [
+  '1D',
+  '1W',
+  '1M',
+  '3M',
+  '6M',
+  '1Y',
 ];
 
-export const FX_CATALOG: MarketAsset[] = [
-  { symbol: 'USD', name: 'US Dollar', rate: 1, changePct: 0, category: 'fx' },
-  { symbol: 'EUR', name: 'Euro', rate: 1.085, changePct: 0, category: 'fx' },
-  { symbol: 'JPY', name: 'Japanese Yen', rate: 155.2, changePct: 0, category: 'fx' },
-  { symbol: 'GBP', name: 'British Pound', rate: 1.265, changePct: 0, category: 'fx' },
-  { symbol: 'CAD', name: 'Canadian Dollar', rate: 1.365, changePct: 0, category: 'fx' },
-  { symbol: 'AUD', name: 'Australian Dollar', rate: 0.655, changePct: 0, category: 'fx' },
-  { symbol: 'CHF', name: 'Swiss Franc', rate: 0.88, changePct: 0, category: 'fx' },
-  { symbol: 'CNY', name: 'Chinese Yuan', rate: 7.18, changePct: 0, category: 'fx' },
-  { symbol: 'SEK', name: 'Swedish Krona', rate: 10.1, changePct: 0, category: 'fx' },
-  { symbol: 'NOK', name: 'Norwegian Krone', rate: 10.4, changePct: 0, category: 'fx' },
-  { symbol: 'NZD', name: 'New Zealand Dollar', rate: 0.61, changePct: 0, category: 'fx' },
-  { symbol: 'SGD', name: 'Singapore Dollar', rate: 1.28, changePct: 0, category: 'fx' },
-  { symbol: 'HKD', name: 'Hong Kong Dollar', rate: 7.8, changePct: 0, category: 'fx' },
-  { symbol: 'INR', name: 'Indian Rupee', rate: 87.1, changePct: 0, category: 'fx' },
-  { symbol: 'ZAR', name: 'South African Rand', rate: 18.2, changePct: 0, category: 'fx' },
-  { symbol: 'BRL', name: 'Brazilian Real', rate: 5.5, changePct: 0, category: 'fx' },
-  { symbol: 'MXN', name: 'Mexican Peso', rate: 19.1, changePct: 0, category: 'fx' },
-  { symbol: 'PLN', name: 'Polish Zloty', rate: 3.9, changePct: 0, category: 'fx' },
-  { symbol: 'DKK', name: 'Danish Krone', rate: 6.6, changePct: 0, category: 'fx' },
-  { symbol: 'THB', name: 'Thai Baht', rate: 32.5, changePct: 0, category: 'fx' },
-];
+const STORAGE_KEY =
+    '@x2_mobile_settings_v3';
 
-export const CRYPTO_CATALOG: MarketAsset[] = [
-  { symbol: 'BTC', name: 'Bitcoin', rate: 65000, changePct: 0, category: 'crypto' },
-  { symbol: 'ETH', name: 'Ethereum', rate: 3500, changePct: 0, category: 'crypto' },
-  { symbol: 'USDT', name: 'Tether', rate: 1, changePct: 0, category: 'crypto' },
-  { symbol: 'SOL', name: 'Solana', rate: 145.5, changePct: 0, category: 'crypto' },
-  { symbol: 'BNB', name: 'Binance Coin', rate: 580, changePct: 0, category: 'crypto' },
-  { symbol: 'XRP', name: 'XRP', rate: 0.52, changePct: 0, category: 'crypto' },
-  { symbol: 'ADA', name: 'Cardano', rate: 0.4, changePct: 0, category: 'crypto' },
-  { symbol: 'DOGE', name: 'Dogecoin', rate: 0.12, changePct: 0, category: 'crypto' },
-  { symbol: 'AVAX', name: 'Avalanche', rate: 28, changePct: 0, category: 'crypto' },
-  { symbol: 'USDC', name: 'USD Coin', rate: 1, changePct: 0, category: 'crypto' },
-];
-
-export const METAL_CATALOG: MarketAsset[] = [
-  { symbol: 'XAU_1OZ', name: 'Gold Spot (1oz)', rate: 2350.5, changePct: 0, category: 'metals' },
-  { symbol: 'XAG_1OZ', name: 'Silver Spot (1oz)', rate: 28.25, changePct: 0, category: 'metals' },
-  { symbol: 'XAU_100G', name: 'Gold Bar (100g)', rate: 7557, changePct: 0, category: 'metals' },
-  { symbol: 'XAG_1KG', name: 'Silver Bar (1kg)', rate: 908.4, changePct: 0, category: 'metals' },
-  { symbol: 'XPT_1OZ', name: 'Platinum (1oz)', rate: 985, changePct: 0, category: 'metals' },
-  { symbol: 'XPD_1OZ', name: 'Palladium (1oz)', rate: 1020, changePct: 0, category: 'metals' },
-  { symbol: 'XAU_1KG', name: 'Gold Kilobar (1kg)', rate: 75570, changePct: 0, category: 'metals' },
-  { symbol: 'XRH_1OZ', name: 'Rhodium (1oz)', rate: 4500, changePct: 0, category: 'metals' },
-  { symbol: 'XAG_100OZ', name: 'Silver Bar (100oz)', rate: 2825, changePct: 0, category: 'metals' },
-  { symbol: 'XCU_1LB', name: 'Copper Futures (1lb)', rate: 4.35, changePct: 0, category: 'metals' },
-];
-
-const ALL_CATALOG = [...FX_CATALOG, ...CRYPTO_CATALOG, ...METAL_CATALOG];
-
-const DEFAULT_FX = ['USD', 'EUR', 'JPY', 'GBP', 'CAD', 'AUD', 'CHF', 'INR'];
-const DEFAULT_CRYPTO = ['BTC', 'ETH', 'USDT', 'SOL', 'BNB'];
-const DEFAULT_METALS = ['XAU_1OZ', 'XAG_1OZ', 'XAU_100G'];
-
-interface PersistedSettings {
+interface MobileServiceState {
   activeTab: TabCategory;
-  tenor: Tenor;
-  decimalPlaces: DecimalPlaces;
-  theme: ThemePreference;
-  watchlistFx: string[];
-  watchlistCrypto: string[];
-  watchlistMetals: string[];
-}
 
-export interface MobileServiceState {
-  activeTab: TabCategory;
   tenor: Tenor;
+
   decimalPlaces: DecimalPlaces;
+
   theme: ThemePreference;
 
   isOnline: boolean;
+
   isLoading: boolean;
+
   lastSynced: number;
+
   countdown: number;
 
-  editingSymbol: string | null;
   isEditMode: boolean;
 
   watchlistFx: string[];
+
   watchlistCrypto: string[];
+
   watchlistMetals: string[];
 
   editWatchlistFx: string[];
+
   editWatchlistCrypto: string[];
+
   editWatchlistMetals: string[];
 
   assets: Record<string, MarketAsset>;
 
-  setActiveTab: (tab: TabCategory) => void;
-  setTenor: (tenor: Tenor) => void;
-  setDecimalPlaces: (dp: DecimalPlaces) => void;
-  setTheme: (theme: ThemePreference) => void;
+  /*
+   * Explicit user overrides.
+   *
+   * These survive refresh and tenor changes.
+   */
+  editedRates: Record<string, number>;
 
-  setEditingSymbol: (symbol: string | null) => void;
-  updateAssetRate: (symbol: string, newRate: number) => void;
+  /*
+   * Dynamic CoinGecko catalogue.
+   */
+  cryptoCatalog: MarketAsset[];
+
+  setActiveTab: (
+      tab: TabCategory,
+  ) => void;
+
+  setTenor: (
+      tenor: Tenor,
+  ) => void;
+
+  setDecimalPlaces: (
+      value: DecimalPlaces,
+  ) => void;
+
+  setTheme: (
+      value: ThemePreference,
+  ) => void;
+
+  updateAssetRate: (
+      symbol: string,
+      rate: number,
+  ) => void;
+
+  clearEditedRate: (
+      symbol: string,
+  ) => void;
 
   startEditing: () => void;
+
   applyEditing: () => Promise<void>;
+
   cancelEditing: () => void;
 
-  reorderWatchlist: (category: TabCategory, newOrder: string[]) => void;
-  addAssetToWatchlist: (category: TabCategory, symbol: string) => void;
-  removeAssetFromWatchlist: (category: TabCategory, symbol: string) => void;
+  reorderWatchlist: (
+      category: TabCategory,
+      order: string[],
+  ) => void;
+
+  addAssetToWatchlist: (
+      category: TabCategory,
+      symbol: string,
+  ) => void;
+
+  removeAssetFromWatchlist: (
+      category: TabCategory,
+      symbol: string,
+  ) => void;
 
   forceRefresh: () => Promise<void>;
+
   tickCountdown: () => void;
+
   initialize: () => Promise<void>;
+
+  loadCryptoCatalog: () => Promise<void>;
 }
 
-function catalogMap(): Record<string, MarketAsset> {
-  return ALL_CATALOG.reduce((acc, asset) => {
-    acc[asset.symbol] = { ...asset };
-    return acc;
-  }, {} as Record<string, MarketAsset>);
+function createAssetMap(): Record<
+    string,
+    MarketAsset
+> {
+  const map: Record<
+      string,
+      MarketAsset
+  > = {};
+
+  [
+    ...FX_CATALOG,
+    ...CRYPTO_DEFAULT_CATALOG,
+    ...METAL_CATALOG,
+  ].forEach((asset) => {
+    map[asset.symbol] = {
+      ...asset,
+    };
+  });
+
+  return map;
 }
 
-function getList(state: MobileServiceState, category: TabCategory): string[] {
-  if (category === 'fx') return state.isEditMode ? state.editWatchlistFx : state.watchlistFx;
-  if (category === 'crypto') return state.isEditMode ? state.editWatchlistCrypto : state.watchlistCrypto;
-  if (category === 'metals') return state.isEditMode ? state.editWatchlistMetals : state.watchlistMetals;
+function getWatchlist(
+    state: MobileServiceState,
+    category: TabCategory,
+): string[] {
+  if (category === 'fx') {
+    return state.isEditMode
+        ? state.editWatchlistFx
+        : state.watchlistFx;
+  }
+
+  if (category === 'crypto') {
+    return state.isEditMode
+        ? state.editWatchlistCrypto
+        : state.watchlistCrypto;
+  }
+
+  if (category === 'metals') {
+    return state.isEditMode
+        ? state.editWatchlistMetals
+        : state.watchlistMetals;
+  }
+
   return [];
 }
 
-async function persist(state: MobileServiceState) {
-  const data: PersistedSettings = {
+async function persistState(
+    state: MobileServiceState,
+) {
+  const settings: PersistedSettings = {
     activeTab: state.activeTab,
     tenor: state.tenor,
-    decimalPlaces: state.decimalPlaces,
+    decimalPlaces:
+    state.decimalPlaces,
     theme: state.theme,
+
     watchlistFx: state.watchlistFx,
-    watchlistCrypto: state.watchlistCrypto,
-    watchlistMetals: state.watchlistMetals,
+    watchlistCrypto:
+    state.watchlistCrypto,
+    watchlistMetals:
+    state.watchlistMetals,
+
+    editedRates: state.editedRates,
   };
 
-  await AsyncStorage.setItem('@x2_mobile_settings', JSON.stringify(data));
+  await AsyncStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(settings),
+  );
 }
 
-async function fetchAllCategories(tenor: Tenor) {
-  const [fx, crypto, metals] = await Promise.all([
-    fetchFxData(tenor),
-    fetchCryptoData(tenor),
-    fetchMetalsData(tenor),
-  ]);
-
-  return { fx, crypto, metals };
-}
-
-export const useMobileStore = create<MobileServiceState>((set, get) => ({
-  activeTab: 'fx',
-  tenor: '1D',
-  decimalPlaces: 4,
-  theme: 'system',
-
-  isOnline: true,
-  isLoading: false,
-  lastSynced: 0,
-  countdown: REFRESH_INTERVAL_SECONDS,
-
-  editingSymbol: null,
-  isEditMode: false,
-
-  watchlistFx: DEFAULT_FX,
-  watchlistCrypto: DEFAULT_CRYPTO,
-  watchlistMetals: DEFAULT_METALS,
-
-  editWatchlistFx: DEFAULT_FX,
-  editWatchlistCrypto: DEFAULT_CRYPTO,
-  editWatchlistMetals: DEFAULT_METALS,
-
-  assets: catalogMap(),
-
-  setActiveTab: (tab) => {
-    set({ activeTab: tab });
-    persist(get()).catch(() => undefined);
-  },
-
-  setTenor: (tenor) => {
-    set({ tenor });
-    persist(get()).catch(() => undefined);
-    get().forceRefresh();
-  },
-
-  setDecimalPlaces: (dp) => {
-    set({ decimalPlaces: dp });
-    persist(get()).catch(() => undefined);
-  },
-
-  setTheme: (theme) => {
-    set({ theme });
-    persist(get()).catch(() => undefined);
-  },
-
-  setEditingSymbol: (symbol) => set({ editingSymbol: symbol }),
-
-  updateAssetRate: (symbol, newRate) => {
-    if (!Number.isFinite(newRate) || newRate <= 0) return;
-
-    const state = get();
-    const target = state.assets[symbol];
-    if (!target) return;
-
-    const assets = {
-      ...state.assets,
-      [symbol]: {
-        ...target,
-        rate: newRate,
-        isCustomEdited: true,
-      },
-    };
-
-    set({ assets });
-  },
-
-  startEditing: () => {
-    const state = get();
-
-    set({
-      isEditMode: true,
-      editingSymbol: null,
-      editWatchlistFx: [...state.watchlistFx],
-      editWatchlistCrypto: [...state.watchlistCrypto],
-      editWatchlistMetals: [...state.watchlistMetals],
-    });
-  },
-
-  applyEditing: async () => {
-    const state = get();
-
-    let fx = [...state.editWatchlistFx];
-
-    // USD must always remain first.
-    fx = ['USD', ...fx.filter((s) => s !== 'USD')];
-
-    const next = {
-      watchlistFx: fx,
-      watchlistCrypto: [...state.editWatchlistCrypto],
-      watchlistMetals: [...state.editWatchlistMetals],
-      isEditMode: false,
-      editingSymbol: null,
-    };
-
-    set(next);
-    await persist({ ...get(), ...next });
-  },
-
-  cancelEditing: () => {
-    set({
-      isEditMode: false,
-      editingSymbol: null,
-      editWatchlistFx: [...get().watchlistFx],
-      editWatchlistCrypto: [...get().watchlistCrypto],
-      editWatchlistMetals: [...get().watchlistMetals],
-    });
-  },
-
-  reorderWatchlist: (category, newOrder) => {
-    if (category === 'fx') {
-      const order = ['USD', ...newOrder.filter((s) => s !== 'USD')];
-      set({ editWatchlistFx: order });
-    } else if (category === 'crypto') {
-      set({ editWatchlistCrypto: newOrder });
-    } else if (category === 'metals') {
-      set({ editWatchlistMetals: newOrder });
-    }
-  },
-
-  addAssetToWatchlist: (category, symbol) => {
-    const state = get();
-    const list = getList(state, category);
-
-    if (list.includes(symbol)) return;
-
-    const next = [...list, symbol];
-
-    if (category === 'fx') set({ editWatchlistFx: next });
-    else if (category === 'crypto') set({ editWatchlistCrypto: next });
-    else if (category === 'metals') set({ editWatchlistMetals: next });
-  },
-
-  removeAssetFromWatchlist: (category, symbol) => {
-    if (category === 'fx' && symbol === 'USD') return;
-
-    const state = get();
-    const list = getList(state, category);
-    const next = list.filter((s) => s !== symbol);
-
-    if (category === 'fx') set({ editWatchlistFx: next });
-    else if (category === 'crypto') set({ editWatchlistCrypto: next });
-    else if (category === 'metals') set({ editWatchlistMetals: next });
-  },
-
-  forceRefresh: async () => {
-    if (get().isLoading) return;
-
-    const { tenor } = get();
-    set({ isLoading: true });
-
-    try {
-      const result = await fetchAllCategories(tenor);
-      const state = get();
-      const assets = { ...state.assets };
-
-      let gotAny = false;
-
-      const merge = (data: Record<string, { rate: number; changePct: number }>) => {
-        Object.entries(data).forEach(([symbol, value]) => {
-          const existing = assets[symbol];
-
-          if (!existing) return;
-
-          // Background API updates must never overwrite a value
-          // that the user has explicitly edited.
-          if (existing.isCustomEdited) return;
-
-          assets[symbol] = {
-            ...existing,
-            rate: value.rate,
-            changePct: value.changePct,
-          };
-
-          gotAny = true;
-        });
-      };
-
-      merge(result.fx);
-      merge(result.crypto);
-      merge(result.metals);
-
-      set({
-        assets,
-        lastSynced: Date.now(),
-        countdown: REFRESH_INTERVAL_SECONDS,
-        isOnline: gotAny,
-        isLoading: false,
-      });
-    } catch {
-      set({
-        isOnline: false,
-        isLoading: false,
-        countdown: REFRESH_INTERVAL_SECONDS,
-      });
-    }
-  },
-
-  tickCountdown: () => {
-    const state = get();
-
-    if (state.countdown <= 1) {
-      set({ countdown: REFRESH_INTERVAL_SECONDS });
-      get().forceRefresh();
-      return;
-    }
-
-    set({ countdown: state.countdown - 1 });
-  },
-
-  initialize: async () => {
-    try {
-      const raw = await AsyncStorage.getItem('@x2_mobile_settings');
-
-      if (raw) {
-        const saved = JSON.parse(raw) as Partial<PersistedSettings>;
-
-        const fx = saved.watchlistFx?.length ? saved.watchlistFx : DEFAULT_FX;
-        const crypto = saved.watchlistCrypto?.length ? saved.watchlistCrypto : DEFAULT_CRYPTO;
-        const metals = saved.watchlistMetals?.length ? saved.watchlistMetals : DEFAULT_METALS;
-
-        set({
-          activeTab: saved.activeTab || 'fx',
-          tenor: saved.tenor || '1D',
-          decimalPlaces: saved.decimalPlaces || 4,
-          theme: saved.theme || 'system',
-          watchlistFx: ['USD', ...fx.filter((s) => s !== 'USD')],
-          watchlistCrypto: crypto,
-          watchlistMetals: metals,
-          editWatchlistFx: ['USD', ...fx.filter((s) => s !== 'USD')],
-          editWatchlistCrypto: crypto,
-          editWatchlistMetals: metals,
-        });
-      }
-    } catch {
-      // Defaults remain active.
-    }
-
-    set({
-      isOnline: true,
-      lastSynced: Date.now(),
-      countdown: REFRESH_INTERVAL_SECONDS,
-    });
-
-    await get().forceRefresh();
-  },
-}));
-
-export class MobileService {
-  private static instance: MobileService;
-
-  public static getInstance(): MobileService {
-    if (!MobileService.instance) {
-      MobileService.instance = new MobileService();
-    }
-
-    return MobileService.instance;
+function calculatePercentage(
+    rate: number,
+    reference: number,
+): number {
+  if (
+      !Number.isFinite(rate) ||
+      !Number.isFinite(reference) ||
+      reference === 0
+  ) {
+    return 0;
   }
 
-  public getStore() {
-    return useMobileStore;
-  }
-
-  public async fetchMarketData(): Promise<void> {
-    await useMobileStore.getState().forceRefresh();
-  }
+  return Number(
+      (
+          ((rate - reference) /
+              reference) *
+          100
+      ).toFixed(2),
+  );
 }
 
-export function getCatalog(category: TabCategory): MarketAsset[] {
-  if (category === 'fx') return FX_CATALOG;
-  if (category === 'crypto') return CRYPTO_CATALOG;
-  if (category === 'metals') return METAL_CATALOG;
-  return [];
-}
+export const useMobileStore =
+    create<MobileServiceState>(
+        (set, get) => ({
+          activeTab: 'fx',
+
+          tenor: '1D',
+
+          decimalPlaces: 4,
+
+          theme: 'system',
+
+          isOnline: true,
+
+          isLoading: false,
+
+          lastSynced: 0,
+
+          countdown:
+          REFRESH_INTERVAL_SECONDS,
+
+          isEditMode: false,
+
+          watchlistFx: [
+            ...DEFAULT_FX,
+          ],
+
+          watchlistCrypto: [
+            ...DEFAULT_CRYPTO,
+          ],
+
+          watchlistMetals: [
+            ...DEFAULT_METALS,
+          ],
+
+          editWatchlistFx: [
+            ...DEFAULT_FX,
+          ],
+
+          editWatchlistCrypto: [
+            ...DEFAULT_CRYPTO,
+          ],
+
+          editWatchlistMetals: [
+            ...DEFAULT_METALS,
+          ],
+
+          assets: createAssetMap(),
+
+          editedRates: {},
+
+          cryptoCatalog: [
+            ...CRYPTO_DEFAULT_CATALOG,
+          ],
+
+          setActiveTab: (tab) => {
+            set({
+              activeTab: tab,
+            });
+
+            persistState(
+                get(),
+            ).catch(() => undefined);
+          },
+
+          setTenor: (tenor) => {
+            /*
+             * Do NOT clear editedRates.
+             *
+             * This is the core fix for:
+             *
+             * 1D -> 1W -> 1M
+             *
+             * edited rates remain exactly as
+             * the user entered them.
+             */
+            set({
+              tenor,
+            });
+
+            persistState(
+                get(),
+            ).catch(() => undefined);
+
+            void get().forceRefresh();
+          },
+
+          setDecimalPlaces: (value) => {
+            set({
+              decimalPlaces: value,
+            });
+
+            persistState(
+                get(),
+            ).catch(() => undefined);
+          },
+
+          setTheme: (value) => {
+            set({
+              theme: value,
+            });
+
+            persistState(
+                get(),
+            ).catch(() => undefined);
+          },
+
+          updateAssetRate: (
+              symbol,
+              rate,
+          ) => {
+            if (
+                !Number.isFinite(rate) ||
+                rate <= 0
+            ) {
+              return;
+            }
+
+            const state = get();
+
+            const asset =
+                state.assets[symbol];
+
+            if (!asset) {
+              return;
+            }
+
+            const editedRates = {
+              ...state.editedRates,
+              [symbol]: rate,
+            };
+
+            const reference =
+                asset.referenceRate ??
+                asset.rate;
+
+            const updatedAsset: MarketAsset = {
+              ...asset,
+
+              rate,
+
+              isCustomEdited: true,
+
+              changePct:
+                  calculatePercentage(
+                      rate,
+                      reference,
+                  ),
+            };
+
+            set({
+              editedRates,
+
+              assets: {
+                ...state.assets,
+
+                [symbol]:
+                updatedAsset,
+              },
+            });
+
+            persistState({
+              ...get(),
+              editedRates,
+            }).catch(
+                () => undefined,
+            );
+          },
+
+          clearEditedRate: (
+              symbol,
+          ) => {
+            const state = get();
+
+            const editedRates = {
+              ...state.editedRates,
+            };
+
+            delete editedRates[
+                symbol
+                ];
+
+            const asset =
+                state.assets[symbol];
+
+            if (!asset) {
+              set({
+                editedRates,
+              });
+
+              return;
+            }
+
+            set({
+              editedRates,
+
+              assets: {
+                ...state.assets,
+
+                [symbol]: {
+                  ...asset,
+                  isCustomEdited:
+                      false,
+                },
+              },
+            });
+
+            persistState(
+                get(),
+            ).catch(() => undefined);
+          },
+
+          startEditing: () => {
+            const state = get();
+
+            set({
+              isEditMode: true,
+
+              editWatchlistFx: [
+                ...state.watchlistFx,
+              ],
+
+              editWatchlistCrypto: [
+                ...state.watchlistCrypto,
+              ],
+
+              editWatchlistMetals: [
+                ...state.watchlistMetals,
+              ],
+            });
+          },
+
+          applyEditing: async () => {
+            const state = get();
+
+            /*
+             * USD is permanently first.
+             */
+            const fx = [
+              'USD',
+              ...state.editWatchlistFx.filter(
+                  (symbol) =>
+                      symbol !== 'USD',
+              ),
+            ];
+
+            const nextState = {
+              watchlistFx: fx,
+
+              watchlistCrypto: [
+                ...state.editWatchlistCrypto,
+              ],
+
+              watchlistMetals: [
+                ...state.editWatchlistMetals,
+              ],
+
+              isEditMode: false,
+            };
+
+            set(nextState);
+
+            await persistState({
+              ...get(),
+              ...nextState,
+            });
+          },
+
+          cancelEditing: () => {
+            const state = get();
+
+            set({
+              isEditMode: false,
+
+              editWatchlistFx: [
+                ...state.watchlistFx,
+              ],
+
+              editWatchlistCrypto: [
+                ...state.watchlistCrypto,
+              ],
+
+              editWatchlistMetals: [
+                ...state.watchlistMetals,
+              ],
+            });
+          },
+
+          reorderWatchlist: (
+              category,
+              order,
+          ) => {
+            if (category === 'fx') {
+              set({
+                editWatchlistFx: [
+                  'USD',
+                  ...order.filter(
+                      (symbol) =>
+                          symbol !== 'USD',
+                  ),
+                ],
+              });
+
+              return;
+            }
+
+            if (
+                category === 'crypto'
+            ) {
+              set({
+                editWatchlistCrypto: [
+                  ...order,
+                ],
+              });
+
+              return;
+            }
+
+            if (
+                category === 'metals'
+            ) {
+              set({
+                editWatchlistMetals: [
+                  ...order,
+                ],
+              });
+            }
+          },
+
+          addAssetToWatchlist: (
+              category,
+              symbol,
+          ) => {
+            const state = get();
+
+            const current =
+                getWatchlist(
+                    state,
+                    category,
+                );
+
+            if (
+                current.includes(symbol)
+            ) {
+              return;
+            }
+
+            const next = [
+              ...current,
+              symbol,
+            ];
+
+            if (category === 'fx') {
+              set({
+                editWatchlistFx: next,
+              });
+            } else if (
+                category === 'crypto'
+            ) {
+              set({
+                editWatchlistCrypto:
+                next,
+              });
+            } else if (
+                category === 'metals'
+            ) {
+              set({
+                editWatchlistMetals:
+                next,
+              });
+            }
+          },
+
+          removeAssetFromWatchlist: (
+              category,
+              symbol,
+          ) => {
+            /*
+             * USD is the base currency and
+             * cannot be removed.
+             */
+            if (
+                category === 'fx' &&
+                symbol === 'USD'
+            ) {
+              return;
+            }
+
+            const state = get();
+
+            const current =
+                getWatchlist(
+                    state,
+                    category,
+                );
+
+            const next =
+                current.filter(
+                    (item) =>
+                        item !== symbol,
+                );
+
+            if (category === 'fx') {
+              set({
+                editWatchlistFx: next,
+              });
+            } else if (
+                category === 'crypto'
+            ) {
+              set({
+                editWatchlistCrypto:
+                next,
+              });
+            } else if (
+                category === 'metals'
+            ) {
+              set({
+                editWatchlistMetals:
+                next,
+              });
+            }
+          },
+
+          forceRefresh: async () => {
+            if (
+                get().isLoading
+            ) {
+              return;
+            }
+
+            const state = get();
+
+            set({
+              isLoading: true,
+            });
+
+            try {
+              /*
+               * Only fetch crypto rates for
+               * the currently selected crypto
+               * watchlist.
+               */
+              const [
+                fx,
+                crypto,
+                metals,
+              ] = await Promise.all([
+                fetchFxData(
+                    state.tenor,
+                ),
+
+                fetchCryptoData(
+                    state.tenor,
+                    state.watchlistCrypto,
+                ),
+
+                fetchMetalsData(
+                    state.tenor,
+                ),
+              ]);
+
+              const current =
+                  get();
+
+              const assets = {
+                ...current.assets,
+              };
+
+              let receivedData =
+                  false;
+
+              const merge = (
+                  data: Record<
+                      string,
+                      {
+                        rate: number;
+                        referenceRate: number;
+                        changePct: number;
+                      }
+                  >,
+              ) => {
+                Object.entries(
+                    data,
+                ).forEach(
+                    ([symbol, value]) => {
+                      const existing =
+                          assets[symbol];
+
+                      /*
+                       * Dynamic crypto asset may
+                       * not yet be in the asset map.
+                       */
+                      if (!existing) {
+                        return;
+                      }
+
+                      const customRate =
+                          current.editedRates[
+                              symbol
+                              ];
+
+                      const hasCustomRate =
+                          typeof customRate ===
+                          'number';
+
+                      const displayedRate =
+                          hasCustomRate
+                              ? customRate
+                              : value.rate;
+
+                      assets[symbol] = {
+                        ...existing,
+
+                        rate:
+                        displayedRate,
+
+                        referenceRate:
+                        value.referenceRate,
+
+                        changePct:
+                            calculatePercentage(
+                                displayedRate,
+                                value.referenceRate,
+                            ),
+
+                        isCustomEdited:
+                        hasCustomRate,
+                      };
+
+                      receivedData = true;
+                    },
+                );
+              };
+
+              merge(fx);
+              merge(crypto);
+              merge(metals);
+
+              set({
+                assets,
+
+                lastSynced:
+                    Date.now(),
+
+                countdown:
+                REFRESH_INTERVAL_SECONDS,
+
+                isOnline:
+                receivedData,
+
+                isLoading: false,
+              });
+            } catch {
+              set({
+                isLoading: false,
+
+                isOnline: false,
+
+                countdown:
+                REFRESH_INTERVAL_SECONDS,
+              });
+            }
+          },
+
+          tickCountdown: () => {
+            const state =
+                get();
+
+            if (
+                state.countdown <= 1
+            ) {
+              set({
+                countdown:
+                REFRESH_INTERVAL_SECONDS,
+              });
+
+              void get()
+                  .forceRefresh();
+
+              return;
+            }
+
+            set({
+              countdown:
+                  state.countdown - 1,
+            });
+          },
+
+          loadCryptoCatalog:
+              async () => {
+                try {
+                  const catalog =
+                      await fetchCryptoCatalog();
+
+                  if (!catalog.length) {
+                    return;
+                  }
+
+                  const state =
+                      get();
+
+                  const existingAssets =
+                      {
+                        ...state.assets,
+                      };
+
+                  const converted =
+                      catalog.map(
+                          (coin) => {
+                            const key =
+                                coin.id;
+
+                            const existing =
+                                existingAssets[
+                                    key
+                                    ];
+
+                            return {
+                              symbol: key,
+
+                              id: key,
+
+                              displaySymbol:
+                              coin.symbol,
+
+                              name:
+                              coin.name,
+
+                              rate:
+                                  existing?.rate ??
+                                  0,
+
+                              referenceRate:
+                                  existing?.referenceRate ??
+                                  0,
+
+                              changePct:
+                                  existing?.changePct ??
+                                  0,
+
+                              category:
+                                  'crypto' as const,
+
+                              isCustomEdited:
+                                  existing?.isCustomEdited ??
+                                  false,
+                            };
+                          },
+                      );
+
+                  converted.forEach(
+                      (asset) => {
+                        existingAssets[
+                            asset.symbol
+                            ] = asset;
+                      },
+                  );
+
+                  set({
+                    cryptoCatalog:
+                    converted,
+
+                    assets:
+                    existingAssets,
+                  });
+                } catch {
+                  // Keep default crypto catalogue.
+                }
+              },
+
+          initialize:
+              async () => {
+                try {
+                  const raw =
+                      await AsyncStorage.getItem(
+                          STORAGE_KEY,
+                      );
+
+                  if (raw) {
+                    const saved =
+                        JSON.parse(
+                            raw,
+                        ) as Partial<PersistedSettings>;
+
+                    const fx =
+                        saved.watchlistFx?.length
+                            ? saved.watchlistFx
+                            : DEFAULT_FX;
+
+                    const crypto =
+                        saved.watchlistCrypto?.length
+                            ? saved.watchlistCrypto
+                            : DEFAULT_CRYPTO;
+
+                    const metals =
+                        saved.watchlistMetals?.length
+                            ? saved.watchlistMetals
+                            : DEFAULT_METALS;
+
+                    const editedRates =
+                        saved.editedRates ??
+                        {};
+
+                    set({
+                      activeTab:
+                          saved.activeTab ??
+                          'fx',
+
+                      tenor:
+                          saved.tenor ??
+                          '1D',
+
+                      decimalPlaces:
+                          saved.decimalPlaces ??
+                          4,
+
+                      theme:
+                          saved.theme ??
+                          'system',
+
+                      watchlistFx: [
+                        'USD',
+                        ...fx.filter(
+                            (symbol) =>
+                                symbol !==
+                                'USD',
+                        ),
+                      ],
+
+                      watchlistCrypto:
+                      crypto,
+
+                      watchlistMetals:
+                      metals,
+
+                      editWatchlistFx: [
+                        'USD',
+                        ...fx.filter(
+                            (symbol) =>
+                                symbol !==
+                                'USD',
+                        ),
+                      ],
+
+                      editWatchlistCrypto:
+                      crypto,
+
+                      editWatchlistMetals:
+                      metals,
+
+                      editedRates,
+                    });
+                  }
+                } catch {
+                  // Defaults remain.
+                }
+
+                /*
+                 * Load the complete CoinGecko
+                 * catalogue independently from
+                 * market-price refresh.
+                 */
+                await get()
+                    .loadCryptoCatalog();
+
+                /*
+                 * Re-apply persisted edited rates
+                 * to the current asset map.
+                 */
+                const state =
+                    get();
+
+                if (
+                    Object.keys(
+                        state.editedRates,
+                    ).length
+                ) {
+                  const assets = {
+                    ...state.assets,
+                  };
+
+                  Object.entries(
+                      state.editedRates,
+                  ).forEach(
+                      ([symbol, rate]) => {
+                        const asset =
+                            assets[symbol];
+
+                        if (!asset) {
+                          return;
+                        }
+
+                        assets[symbol] = {
+                          ...asset,
+
+                          rate,
+
+                          isCustomEdited:
+                              true,
+
+                          changePct:
+                              calculatePercentage(
+                                  rate,
+                                  asset.referenceRate ??
+                                  rate,
+                              ),
+                        };
+                      },
+                  );
+
+                  set({
+                    assets,
+                  });
+                }
+
+                set({
+                  isOnline: true,
+
+                  lastSynced:
+                      Date.now(),
+
+                  countdown:
+                  REFRESH_INTERVAL_SECONDS,
+                });
+
+                await get()
+                    .forceRefresh();
+              },
+        }),
+    );

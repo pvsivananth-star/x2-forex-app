@@ -1,11 +1,8 @@
-import { Tenor } from './MobileService';
-
-export interface FetchedRate {
-  rate: number;
-  changePct: number;
-}
-
-export type FetchedMap = Record<string, FetchedRate>;
+import {
+  CryptoCatalogItem,
+  FetchedMap,
+  Tenor,
+} from './types';
 
 const TENOR_DAYS: Record<Tenor, number> = {
   '1D': 1,
@@ -26,31 +23,48 @@ const TENOR_TRADING_DAYS: Record<Tenor, number> = {
 };
 
 function isoDaysAgo(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0, 10);
+  const date = new Date();
+
+  date.setDate(
+      date.getDate() - days,
+  );
+
+  return date
+      .toISOString()
+      .slice(0, 10);
 }
 
-function pct(current: number, past: number): number {
-  if (!past) return 0;
-  return Number((((current - past) / past) * 100).toFixed(2));
+function percentageChange(
+    current: number,
+    reference: number,
+): number {
+  if (
+      !Number.isFinite(current) ||
+      !Number.isFinite(reference) ||
+      reference === 0
+  ) {
+    return 0;
+  }
+
+  return Number(
+      (
+          ((current - reference) / reference) *
+          100
+      ).toFixed(2),
+  );
 }
 
-/*
- * Frankfurter provides USD-base rates.
- *
- * Internally the mobile app now stores FX currencies as:
- *
- * USD
- * EUR
- * GBP
- * JPY
- * INR
- *
- * For currencies where USD/CCY is returned, that is the displayed
- * USD-base rate. For EUR/USD-style currencies, we invert.
- */
-const FX_MAP: Record<string, { ccy: string; invert: boolean }> = {
+/* -------------------------------------------------------------------------- */
+/* FX                                                                        */
+/* -------------------------------------------------------------------------- */
+
+const FX_MAP: Record<
+    string,
+    {
+      ccy: string;
+      invert: boolean;
+    }
+> = {
   EUR: { ccy: 'EUR', invert: true },
   JPY: { ccy: 'JPY', invert: false },
   GBP: { ccy: 'GBP', invert: true },
@@ -72,188 +86,473 @@ const FX_MAP: Record<string, { ccy: string; invert: boolean }> = {
   THB: { ccy: 'THB', invert: false },
 };
 
-export async function fetchFxData(tenor: Tenor): Promise<FetchedMap> {
-  const codes = Object.values(FX_MAP).map((v) => v.ccy).join(',');
-  const out: FetchedMap = {
-    USD: { rate: 1, changePct: 0 },
+export async function fetchFxData(
+    tenor: Tenor,
+): Promise<FetchedMap> {
+  const currencies = Object.values(FX_MAP)
+      .map((item) => item.ccy)
+      .join(',');
+
+  const result: FetchedMap = {
+    USD: {
+      rate: 1,
+      referenceRate: 1,
+      changePct: 0,
+    },
   };
 
   try {
-    const [curRes, pastRes] = await Promise.all([
-      fetch(`https://api.frankfurter.app/latest?from=USD&to=${codes}`),
-      fetch(
-          `https://api.frankfurter.app/${isoDaysAgo(
-              TENOR_DAYS[tenor],
-          )}?from=USD&to=${codes}`,
-      ),
-    ]);
-
-    if (!curRes.ok) throw new Error('Current FX request failed');
-
-    const cur = await curRes.json();
-    const past = pastRes.ok ? await pastRes.json() : {};
-
-    Object.entries(FX_MAP).forEach(([symbol, { ccy, invert }]) => {
-      const curRaw = cur?.rates?.[ccy];
-      const pastRaw = past?.rates?.[ccy];
-
-      if (typeof curRaw !== 'number') return;
-
-      const curVal = invert ? 1 / curRaw : curRaw;
-
-      const pastVal =
-          typeof pastRaw === 'number'
-              ? invert
-                  ? 1 / pastRaw
-                  : pastRaw
-              : curVal;
-
-      out[symbol] = {
-        rate: Number(curVal.toFixed(6)),
-        changePct: pct(curVal, pastVal),
-      };
-    });
-  } catch {
-    // Caller retains cached values.
-  }
-
-  return out;
-}
-
-const CRYPTO_MAP: Record<string, string> = {
-  BTC: 'bitcoin',
-  ETH: 'ethereum',
-  USDT: 'tether',
-  SOL: 'solana',
-  BNB: 'binance-coin',
-  XRP: 'xrp',
-  ADA: 'cardano',
-  DOGE: 'dogecoin',
-  AVAX: 'avalanche',
-  USDC: 'usd-coin',
-};
-
-export async function fetchCryptoData(tenor: Tenor): Promise<FetchedMap> {
-  const out: FetchedMap = {};
-  const ids = Object.values(CRYPTO_MAP).join(',');
-
-  try {
-    const res = await fetch(
-        `https://api.coincap.io/v2/assets?ids=${ids}`,
-    );
-
-    if (!res.ok) throw new Error('Crypto request failed');
-
-    const json = await res.json();
-
-    const byId: Record<
-        string,
-        {
-          id: string;
-          priceUsd: string;
-          changePercent24Hr: string;
-        }
-    > = {};
-
-    (json?.data || []).forEach((asset: any) => {
-      byId[asset.id] = asset;
-    });
-
-    if (tenor === '1D') {
-      Object.entries(CRYPTO_MAP).forEach(([symbol, id]) => {
-        const asset = byId[id];
-
-        if (!asset) return;
-
-        const rate = parseFloat(asset.priceUsd);
-
-        if (!Number.isFinite(rate)) return;
-
-        out[symbol] = {
-          rate: Number(rate.toFixed(6)),
-          changePct: Number(
-              parseFloat(asset.changePercent24Hr || '0').toFixed(2),
+    const [currentResponse, historicalResponse] =
+        await Promise.all([
+          fetch(
+              `https://api.frankfurter.app/latest?from=USD&to=${currencies}`,
           ),
-        };
-      });
 
-      return out;
+          fetch(
+              `https://api.frankfurter.app/${isoDaysAgo(
+                  TENOR_DAYS[tenor],
+              )}?from=USD&to=${currencies}`,
+          ),
+        ]);
+
+    if (!currentResponse.ok) {
+      throw new Error(
+          'Current FX request failed',
+      );
     }
 
-    const days = TENOR_DAYS[tenor];
-    const end = Date.now();
-    const start = end - days * 86400000;
+    const current =
+        await currentResponse.json();
 
-    await Promise.all(
-        Object.entries(CRYPTO_MAP).map(async ([symbol, id]) => {
-          const asset = byId[id];
+    const historical =
+        historicalResponse.ok
+            ? await historicalResponse.json()
+            : {};
 
-          if (!asset) return;
+    Object.entries(FX_MAP).forEach(
+        ([symbol, mapping]) => {
+          const currentRaw =
+              current?.rates?.[mapping.ccy];
 
-          const current = parseFloat(asset.priceUsd);
+          const historicalRaw =
+              historical?.rates?.[mapping.ccy];
 
-          if (!Number.isFinite(current)) return;
-
-          try {
-            const historyResponse = await fetch(
-                `https://api.coincap.io/v2/assets/${id}/history?interval=d1&start=${start}&end=${end}`,
-            );
-
-            const history = await historyResponse.json();
-            const first = history?.data?.[0]?.priceUsd;
-
-            const past = first ? parseFloat(first) : current;
-
-            out[symbol] = {
-              rate: Number(current.toFixed(6)),
-              changePct: pct(current, past),
-            };
-          } catch {
-            out[symbol] = {
-              rate: Number(current.toFixed(6)),
-              changePct: Number(
-                  parseFloat(asset.changePercent24Hr || '0').toFixed(2),
-              ),
-            };
+          if (
+              typeof currentRaw !== 'number'
+          ) {
+            return;
           }
+
+          const rate = mapping.invert
+              ? 1 / currentRaw
+              : currentRaw;
+
+          const reference =
+              typeof historicalRaw === 'number'
+                  ? mapping.invert
+                      ? 1 / historicalRaw
+                      : historicalRaw
+                  : rate;
+
+          result[symbol] = {
+            rate: Number(
+                rate.toFixed(8),
+            ),
+
+            referenceRate: Number(
+                reference.toFixed(8),
+            ),
+
+            changePct:
+                percentageChange(
+                    rate,
+                    reference,
+                ),
+          };
+        },
+    );
+  } catch {
+    // Keep cached values.
+  }
+
+  return result;
+}
+
+/* -------------------------------------------------------------------------- */
+/* COINGECKO CATALOG                                                         */
+/* -------------------------------------------------------------------------- */
+
+const COINGECKO_BASE =
+    'https://api.coingecko.com/api/v3';
+
+let cryptoCatalogCache:
+    CryptoCatalogItem[] | null = null;
+
+let cryptoCatalogPromise:
+    Promise<CryptoCatalogItem[]> | null = null;
+
+export async function fetchCryptoCatalog(): Promise<
+    CryptoCatalogItem[]
+> {
+  if (cryptoCatalogCache) {
+    return cryptoCatalogCache;
+  }
+
+  if (cryptoCatalogPromise) {
+    return cryptoCatalogPromise;
+  }
+
+  cryptoCatalogPromise = (async () => {
+    try {
+      const response = await fetch(
+          `${COINGECKO_BASE}/coins/list?include_platform=false`,
+      );
+
+      if (!response.ok) {
+        throw new Error(
+            'CoinGecko catalogue request failed',
+        );
+      }
+
+      const data =
+          (await response.json()) as Array<{
+            id: string;
+            symbol: string;
+            name: string;
+          }>;
+
+      const seen = new Set<string>();
+
+      const catalog =
+          data
+              .filter(
+                  (coin) =>
+                      coin?.id &&
+                      coin?.name &&
+                      coin?.symbol,
+              )
+              .map((coin) => ({
+                id: coin.id,
+                symbol:
+                    coin.symbol.toUpperCase(),
+                name: coin.name,
+              }))
+              .filter((coin) => {
+                /*
+                 * CoinGecko contains multiple coins with
+                 * the same symbol. Keep every coin, but
+                 * de-duplicate exact ID entries.
+                 */
+                const key = coin.id;
+
+                if (seen.has(key)) {
+                  return false;
+                }
+
+                seen.add(key);
+
+                return true;
+              })
+              .sort((a, b) =>
+                  a.name.localeCompare(b.name),
+              );
+
+      cryptoCatalogCache = catalog;
+
+      return catalog;
+    } catch {
+      return [];
+    } finally {
+      cryptoCatalogPromise = null;
+    }
+  })();
+
+  return cryptoCatalogPromise;
+}
+
+/* -------------------------------------------------------------------------- */
+/* COINGECKO MARKET DATA                                                      */
+/* -------------------------------------------------------------------------- */
+
+interface CoinMarket {
+  id: string;
+  current_price: number | null;
+  price_change_percentage_24h:
+      | number
+      | null;
+}
+
+async function fetchCoinMarkets(
+    ids: string[],
+): Promise<CoinMarket[]> {
+  if (!ids.length) {
+    return [];
+  }
+
+  const response = await fetch(
+      `${COINGECKO_BASE}/coins/markets` +
+      `?vs_currency=usd` +
+      `&ids=${ids
+          .map(encodeURIComponent)
+          .join(',')}` +
+      `&order=market_cap_desc` +
+      `&per_page=250` +
+      `&page=1` +
+      `&sparkline=false`,
+  );
+
+  if (!response.ok) {
+    throw new Error(
+        'CoinGecko market request failed',
+    );
+  }
+
+  return (
+      (await response.json()) as CoinMarket[]
+  );
+}
+
+async function fetchCryptoHistory(
+    id: string,
+    days: number,
+): Promise<number | null> {
+  try {
+    const response = await fetch(
+        `${COINGECKO_BASE}/coins/${encodeURIComponent(
+            id,
+        )}/market_chart?vs_currency=usd&days=${days}`,
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const json = await response.json();
+
+    const prices =
+        Array.isArray(json?.prices)
+            ? json.prices
+            : [];
+
+    if (!prices.length) {
+      return null;
+    }
+
+    /*
+     * First historical point is used as the
+     * comparison point for the selected tenor.
+     */
+    const first = prices[0]?.[1];
+
+    return typeof first === 'number'
+        ? first
+        : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchCryptoData(
+    tenor: Tenor,
+    selectedIds: string[],
+): Promise<FetchedMap> {
+  const result: FetchedMap = {};
+
+  if (!selectedIds.length) {
+    return result;
+  }
+
+  try {
+    const markets =
+        await fetchCoinMarkets(
+            selectedIds,
+        );
+
+    const marketMap =
+        new Map<string, CoinMarket>();
+
+    markets.forEach((market) => {
+      marketMap.set(
+          market.id,
+          market,
+      );
+    });
+
+    /*
+     * 1D is directly supplied by CoinGecko's
+     * market endpoint.
+     *
+     * Longer tenors use historical market_chart
+     * so the displayed percentage is actually
+     * recalculated for the selected tenor.
+     */
+    await Promise.all(
+        selectedIds.map(async (id) => {
+          const market =
+              marketMap.get(id);
+
+          if (!market) {
+            return;
+          }
+
+          const current =
+              market.current_price;
+
+          if (
+              typeof current !== 'number' ||
+              !Number.isFinite(current)
+          ) {
+            return;
+          }
+
+          let reference: number | null =
+              null;
+
+          if (tenor === '1D') {
+            reference =
+                current /
+                (1 +
+                    (Number(
+                            market.price_change_percentage_24h ??
+                            0,
+                        ) /
+                        100));
+          } else {
+            reference =
+                await fetchCryptoHistory(
+                    id,
+                    TENOR_DAYS[tenor],
+                );
+          }
+
+          if (
+              !reference ||
+              !Number.isFinite(reference)
+          ) {
+            reference = current;
+          }
+
+          result[id] = {
+            rate: Number(
+                current.toFixed(12),
+            ),
+
+            referenceRate: Number(
+                reference.toFixed(12),
+            ),
+
+            changePct:
+                percentageChange(
+                    current,
+                    reference,
+                ),
+          };
         }),
     );
   } catch {
-    // Caller retains cached values.
+    // Keep cached values.
   }
 
-  return out;
+  return result;
 }
 
-const METAL_TICKERS: Record<string, string> = {
+/* -------------------------------------------------------------------------- */
+/* METALS                                                                     */
+/* -------------------------------------------------------------------------- */
+
+const METAL_TICKERS: Record<
+    string,
+    string
+> = {
   XAU: 'GC=F',
   XAG: 'SI=F',
   XPT: 'PL=F',
   XPD: 'PA=F',
   XCU: 'HG=F',
+  XAL: 'ALI=F',
+  XNI: 'NI=F',
+  XZN: 'ZNC=F',
+  XPB: 'LEAD=F',
 };
 
-const RHODIUM_FALLBACK = 4500;
-const TROY_OZ_TO_GRAM = 31.1035;
+const TROY_OZ_TO_GRAM =
+    31.1034768;
 
 const METAL_UNITS: Record<
     string,
-    { base: keyof typeof METAL_TICKERS; factor: number }
+    {
+      base: string;
+      factor: number;
+    }
 > = {
-  XAU_1OZ: { base: 'XAU', factor: 1 },
-  XAG_1OZ: { base: 'XAG', factor: 1 },
-  XAU_100G: { base: 'XAU', factor: 100 / TROY_OZ_TO_GRAM },
-  XAG_1KG: { base: 'XAG', factor: 1000 / TROY_OZ_TO_GRAM },
-  XPT_1OZ: { base: 'XPT', factor: 1 },
-  XPD_1OZ: { base: 'XPD', factor: 1 },
-  XAU_1KG: { base: 'XAU', factor: 1000 / TROY_OZ_TO_GRAM },
-  XAG_100OZ: { base: 'XAG', factor: 100 },
-  XCU_1LB: { base: 'XCU', factor: 1 },
+  XAU_1OZ: {
+    base: 'XAU',
+    factor: 1,
+  },
+
+  XAG_1OZ: {
+    base: 'XAG',
+    factor: 1,
+  },
+
+  XPT_1OZ: {
+    base: 'XPT',
+    factor: 1,
+  },
+
+  XPD_1OZ: {
+    base: 'XPD',
+    factor: 1,
+  },
+
+  XRH_1OZ: {
+    base: 'XRH',
+    factor: 1,
+  },
+
+  XCU_1LB: {
+    base: 'XCU',
+    factor: 1,
+  },
+
+  XAL_1LB: {
+    base: 'XAL',
+    factor: 1,
+  },
+
+  XNI_1LB: {
+    base: 'XNI',
+    factor: 1,
+  },
+
+  XZN_1LB: {
+    base: 'XZN',
+    factor: 1,
+  },
+
+  XPB_1LB: {
+    base: 'XPB',
+    factor: 1,
+  },
+};
+
+const METAL_FALLBACKS: Record<
+    string,
+    number
+> = {
+  XRH: 4500,
+  XAL: 1.1,
+  XNI: 7.5,
+  XZN: 1.2,
+  XPB: 0.95,
 };
 
 async function fetchYahooSeries(
     ticker: string,
-): Promise<{ current: number; closes: number[] } | null> {
+): Promise<{
+  current: number;
+  closes: number[];
+} | null> {
   try {
     const response = await fetch(
         `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
@@ -261,23 +560,38 @@ async function fetchYahooSeries(
         )}?interval=1d&range=1y`,
     );
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      return null;
+    }
 
     const json = await response.json();
-    const result = json?.chart?.result?.[0];
+
+    const chart =
+        json?.chart?.result?.[0];
 
     const closes =
-        result?.indicators?.quote?.[0]?.close?.filter(
-            (value: number | null) => value != null,
-        ) || [];
+        chart?.indicators?.quote?.[0]?.close
+            ?.filter(
+                (
+                    value: number | null,
+                ) => value != null,
+            ) || [];
 
     const current =
-        result?.meta?.regularMarketPrice ??
+        chart?.meta?.regularMarketPrice ??
         closes[closes.length - 1];
 
-    if (!current || !closes.length) return null;
+    if (
+        typeof current !== 'number' ||
+        !closes.length
+    ) {
+      return null;
+    }
 
-    return { current, closes };
+    return {
+      current,
+      closes,
+    };
   } catch {
     return null;
   }
@@ -286,52 +600,92 @@ async function fetchYahooSeries(
 export async function fetchMetalsData(
     tenor: Tenor,
 ): Promise<FetchedMap> {
-  const out: FetchedMap = {};
+  const result: FetchedMap = {};
 
   const baseResults: Record<
       string,
-      { rate: number; changePct: number }
+      {
+        rate: number;
+        referenceRate: number;
+      }
   > = {};
 
   await Promise.all(
-      Object.entries(METAL_TICKERS).map(async ([base, ticker]) => {
-        const series = await fetchYahooSeries(ticker);
+      Object.entries(METAL_TICKERS).map(
+          async ([base, ticker]) => {
+            const series =
+                await fetchYahooSeries(ticker);
 
-        if (!series) return;
+            if (!series) {
+              return;
+            }
 
-        const offset = TENOR_TRADING_DAYS[tenor];
-        const index = Math.max(
-            0,
-            series.closes.length - 1 - offset,
-        );
+            const offset =
+                TENOR_TRADING_DAYS[tenor];
 
-        const past =
-            series.closes[index] ?? series.current;
+            const index = Math.max(
+                0,
+                series.closes.length -
+                1 -
+                offset,
+            );
 
-        baseResults[base] = {
-          rate: series.current,
-          changePct: pct(series.current, past),
-        };
-      }),
+            const reference =
+                series.closes[index] ??
+                series.current;
+
+            baseResults[base] = {
+              rate: series.current,
+              referenceRate: reference,
+            };
+          },
+      ),
+  );
+
+  Object.entries(METAL_FALLBACKS).forEach(
+      ([base, fallback]) => {
+        if (!baseResults[base]) {
+          baseResults[base] = {
+            rate: fallback,
+            referenceRate: fallback,
+          };
+        }
+      },
   );
 
   Object.entries(METAL_UNITS).forEach(
-      ([symbol, { base, factor }]) => {
-        const result = baseResults[base];
+      ([symbol, mapping]) => {
+        const base =
+            baseResults[mapping.base];
 
-        if (!result) return;
+        if (!base) {
+          return;
+        }
 
-        out[symbol] = {
-          rate: Number((result.rate * factor).toFixed(4)),
-          changePct: result.changePct,
+        const rate =
+            base.rate * mapping.factor;
+
+        const reference =
+            base.referenceRate *
+            mapping.factor;
+
+        result[symbol] = {
+          rate: Number(
+              rate.toFixed(8),
+          ),
+
+          referenceRate: Number(
+              reference.toFixed(8),
+          ),
+
+          changePct:
+              percentageChange(
+                  rate,
+                  reference,
+              ),
         };
       },
   );
 
-  out.XRH_1OZ = out.XRH_1OZ || {
-    rate: RHODIUM_FALLBACK,
-    changePct: 0,
-  };
-
-  return out;
+  return result;
 }

@@ -1,1764 +1,1386 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, {
+    useEffect,
+    useMemo,
+    useState,
+} from 'react';
+
 import {
-  Alert,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  useColorScheme,
-  View,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useColorScheme,
+    View,
 } from 'react-native';
 
 import {
-  CRYPTO_CATALOG,
-  FX_CATALOG,
-  G10_CODES,
-  getCatalog,
-  MarketAsset,
-  METAL_CATALOG,
-  REFRESH_INTERVAL_SECONDS,
-  TabCategory,
-  TENOR_OPTIONS,
-  useMobileStore,
-  DecimalPlaces,
+    useMobileStore,
+    TENOR_OPTIONS,
+    REFRESH_INTERVAL_SECONDS,
 } from './MobileService';
 
-const TABS: {
-  key: TabCategory;
-  label: string;
-  icon: string;
-}[] = [
-  { key: 'fx', label: 'Forex', icon: '💱' },
-  { key: 'crypto', label: 'Crypto', icon: '₿' },
-  { key: 'metals', label: 'Metals', icon: '🪙' },
-  { key: 'portfolio', label: 'Portfolio', icon: '📊' },
-];
+import {
+    TabCategory,
+    DecimalPlaces,
+    MarketAsset,
+} from './types';
 
-const DARK = {
-  background: '#0b0f19',
-  surface: '#111827',
-  surface2: '#1e293b',
-  border: '#263244',
-  text: '#f8fafc',
-  muted: '#94a3b8',
-  dim: '#64748b',
-  accent: '#38bdf8',
-  accentStrong: '#0284c7',
-  green: '#10b981',
-  red: '#ef4444',
-  yellow: '#f59e0b',
+import {
+    FX_CATALOG,
+    METAL_CATALOG,
+    CRYPTO_DEFAULT_CATALOG,
+} from './catalogs';
+
+import {
+    DARK_COLORS,
+    LIGHT_COLORS,
+} from './theme';
+
+import {
+    BottomTabs,
+} from './components/BottomTabs';
+
+import {
+    RefreshTimer,
+} from './components/RefreshTimer';
+
+import {
+    MarketRow,
+} from './components/MarketRow';
+
+import {
+    EditRow,
+} from './components/EditRow';
+
+import {
+    AssetPickerModal,
+} from './components/AssetPickerModal';
+
+import {
+    SettingsModal,
+} from './components/SettingsModal';
+
+const TAB_TITLES: Record<
+    TabCategory,
+    string
+> = {
+    fx: 'Forex',
+    crypto: 'Crypto',
+    metals: 'Metals',
+    portfolio: 'Portfolio',
 };
 
-const LIGHT = {
-  background: '#f8fafc',
-  surface: '#ffffff',
-  surface2: '#f1f5f9',
-  border: '#dbe3ee',
-  text: '#0f172a',
-  muted: '#475569',
-  dim: '#64748b',
-  accent: '#0284c7',
-  accentStrong: '#0369a1',
-  green: '#059669',
-  red: '#dc2626',
-  yellow: '#d97706',
-};
+export const MobileApplication: React.FC =
+    () => {
+        const systemTheme =
+            useColorScheme();
 
-function assetLabel(asset: MarketAsset, category: TabCategory) {
-  if (category === 'fx') {
-    return asset.symbol;
-  }
+        const {
+            activeTab,
+            tenor,
+            decimalPlaces,
+            theme,
 
-  return asset.symbol;
-}
+            isOnline,
+            isLoading,
+            lastSynced,
+            countdown,
 
-export const MobileApplication: React.FC = () => {
-  const systemTheme = useColorScheme();
+            isEditMode,
 
-  const {
-    activeTab,
-    tenor,
-    decimalPlaces,
-    theme,
-    isOnline,
-    isLoading,
-    lastSynced,
-    countdown,
-    isEditMode,
+            watchlistFx,
+            watchlistCrypto,
+            watchlistMetals,
 
-    watchlistFx,
-    watchlistCrypto,
-    watchlistMetals,
+            editWatchlistFx,
+            editWatchlistCrypto,
+            editWatchlistMetals,
 
-    editWatchlistFx,
-    editWatchlistCrypto,
-    editWatchlistMetals,
+            assets,
+            cryptoCatalog,
 
-    assets,
+            setActiveTab,
+            setTenor,
+            setDecimalPlaces,
+            setTheme,
 
-    setActiveTab,
-    setTenor,
-    setDecimalPlaces,
-    setTheme,
+            updateAssetRate,
 
-    updateAssetRate,
-    startEditing,
-    applyEditing,
-    cancelEditing,
+            startEditing,
+            applyEditing,
+            cancelEditing,
 
-    reorderWatchlist,
-    addAssetToWatchlist,
-    removeAssetFromWatchlist,
+            reorderWatchlist,
+            addAssetToWatchlist,
+            removeAssetFromWatchlist,
 
-    forceRefresh,
-    tickCountdown,
-    initialize,
-  } = useMobileStore();
+            forceRefresh,
+            tickCountdown,
+            initialize,
+        } =
+            useMobileStore();
 
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [addOpen, setAddOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const [tenorOpen, setTenorOpen] = useState(false);
-  const [inputValues, setInputValues] = useState<Record<string, string>>({});
+        const [
+            settingsOpen,
+            setSettingsOpen,
+        ] = useState(false);
 
-  const darkMode =
-      theme === 'dark' ||
-      (theme === 'system' && systemTheme !== 'light');
+        const [
+            pickerOpen,
+            setPickerOpen,
+        ] = useState(false);
 
-  const colors = darkMode ? DARK : LIGHT;
+        const [
+            tenorOpen,
+            setTenorOpen,
+        ] = useState(false);
 
-  useEffect(() => {
-    initialize();
-  }, [initialize]);
+        const [
+            search,
+            setSearch,
+        ] = useState('');
 
-  useEffect(() => {
-    const timer = setInterval(
-        () => tickCountdown(),
-        1000,
-    );
+        /*
+         * Draft values are local to each symbol.
+         *
+         * This prevents editing one row from
+         * changing the other rows.
+         */
+        const [
+            draftRates,
+            setDraftRates,
+        ] = useState<
+            Record<string, string>
+        >({});
 
-    return () => clearInterval(timer);
-  }, [tickCountdown]);
+        const darkMode =
+            theme === 'dark' ||
+            (
+                theme === 'system' &&
+                systemTheme !== 'light'
+            );
 
-  const currentWatchlist = useMemo(() => {
-    if (activeTab === 'fx') {
-      return isEditMode ? editWatchlistFx : watchlistFx;
-    }
+        const colors =
+            darkMode
+                ? DARK_COLORS
+                : LIGHT_COLORS;
 
-    if (activeTab === 'crypto') {
-      return isEditMode
-          ? editWatchlistCrypto
-          : watchlistCrypto;
-    }
+        useEffect(() => {
+            void initialize();
+        }, [initialize]);
 
-    if (activeTab === 'metals') {
-      return isEditMode
-          ? editWatchlistMetals
-          : watchlistMetals;
-    }
+        useEffect(() => {
+            const timer =
+                setInterval(
+                    () =>
+                        tickCountdown(),
+                    1000,
+                );
 
-    return [];
-  }, [
-    activeTab,
-    isEditMode,
-    editWatchlistFx,
-    editWatchlistCrypto,
-    editWatchlistMetals,
-    watchlistFx,
-    watchlistCrypto,
-    watchlistMetals,
-  ]);
+            return () =>
+                clearInterval(timer);
+        }, [tickCountdown]);
 
-  const catalog = useMemo(
-      () => getCatalog(activeTab),
-      [activeTab],
-  );
-
-  const filteredCatalog = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    if (!query) {
-      return catalog.slice(0, 30);
-    }
-
-    return catalog
-        .filter(
-            (asset) =>
-                asset.symbol.toLowerCase().includes(query) ||
-                asset.name.toLowerCase().includes(query),
-        )
-        .slice(0, 30);
-  }, [catalog, search]);
-
-  const formatRate = (rate: number) =>
-      rate.toFixed(decimalPlaces as DecimalPlaces);
-
-  const handleRateChange = (
-      symbol: string,
-      value: string,
-  ) => {
-    setInputValues((previous) => ({
-      ...previous,
-      [symbol]: value,
-    }));
-
-    const parsed = parseFloat(value);
-
-    if (Number.isFinite(parsed) && parsed > 0) {
-      updateAssetRate(symbol, parsed);
-    }
-  };
-
-  const moveRow = (
-      index: number,
-      direction: -1 | 1,
-  ) => {
-    const next = [...currentWatchlist];
-    const target = index + direction;
-
-    if (target < 0 || target >= next.length) return;
-
-    if (activeTab === 'fx' && next[index] === 'USD') {
-      return;
-    }
-
-    if (activeTab === 'fx' && next[target] === 'USD') {
-      return;
-    }
-
-    [next[index], next[target]] = [
-      next[target],
-      next[index],
-    ];
-
-    reorderWatchlist(activeTab, next);
-  };
-
-  const openAdd = () => {
-    setSearch('');
-    setAddOpen(true);
-  };
-
-  const addSelected = (symbol: string) => {
-    addAssetToWatchlist(activeTab, symbol);
-    setSearch('');
-    setAddOpen(false);
-  };
-
-  const removeSelected = (symbol: string) => {
-    if (activeTab === 'fx' && symbol === 'USD') {
-      return;
-    }
-
-    removeAssetFromWatchlist(activeTab, symbol);
-  };
-
-  const themeButton = (
-      value: 'system' | 'light' | 'dark',
-      label: string,
-  ) => (
-      <TouchableOpacity
-          key={value}
-          style={[
-            styles.themeButton,
-            {
-              backgroundColor:
-                  theme === value
-                      ? colors.accentStrong
-                      : colors.surface,
-              borderColor:
-                  theme === value
-                      ? colors.accent
-                      : colors.border,
-            },
-          ]}
-          onPress={() => setTheme(value)}
-      >
-        <Text
-            style={[
-              styles.themeButtonText,
-              {
-                color:
-                    theme === value
-                        ? '#ffffff'
-                        : colors.muted,
-              },
-            ]}
-        >
-          {label}
-        </Text>
-      </TouchableOpacity>
-  );
-
-  return (
-      <SafeAreaView
-          style={[
-            styles.container,
-            { backgroundColor: colors.background },
-          ]}
-      >
-        <StatusBar
-            barStyle={
-              darkMode
-                  ? 'light-content'
-                  : 'dark-content'
-            }
-            backgroundColor={colors.surface}
-        />
-
-        {/* HEADER */}
-        <View
-            style={[
-              styles.header,
-              {
-                backgroundColor: colors.surface,
-                borderBottomColor: colors.border,
-              },
-            ]}
-        >
-          <View style={styles.headerRow}>
-            <TouchableOpacity
-                accessibilityLabel="Open settings"
-                onPress={() =>
-                    setSettingsOpen(true)
+        const currentWatchlist =
+            useMemo(() => {
+                if (activeTab === 'fx') {
+                    return isEditMode
+                        ? editWatchlistFx
+                        : watchlistFx;
                 }
-                style={styles.headerIconButton}
-            >
-              <Text
-                  style={[
-                    styles.headerIcon,
-                    { color: colors.text },
-                  ]}
-              >
-                ☰
-              </Text>
-            </TouchableOpacity>
 
-            <Text
+                if (
+                    activeTab === 'crypto'
+                ) {
+                    return isEditMode
+                        ? editWatchlistCrypto
+                        : watchlistCrypto;
+                }
+
+                if (
+                    activeTab === 'metals'
+                ) {
+                    return isEditMode
+                        ? editWatchlistMetals
+                        : watchlistMetals;
+                }
+
+                return [];
+            }, [
+                activeTab,
+                isEditMode,
+
+                editWatchlistFx,
+                editWatchlistCrypto,
+                editWatchlistMetals,
+
+                watchlistFx,
+                watchlistCrypto,
+                watchlistMetals,
+            ]);
+
+        const currentCatalog =
+            useMemo<MarketAsset[]>(
+                () => {
+                    if (
+                        activeTab === 'fx'
+                    ) {
+                        return FX_CATALOG;
+                    }
+
+                    if (
+                        activeTab ===
+                        'metals'
+                    ) {
+                        return METAL_CATALOG;
+                    }
+
+                    if (
+                        activeTab ===
+                        'crypto'
+                    ) {
+                        return cryptoCatalog.length
+                            ? cryptoCatalog
+                            : CRYPTO_DEFAULT_CATALOG;
+                    }
+
+                    return [];
+                },
+                [
+                    activeTab,
+                    cryptoCatalog,
+                ],
+            );
+
+        const visibleAssets =
+            useMemo(() => {
+                return currentWatchlist
+                    .map(
+                        (symbol) =>
+                            assets[symbol],
+                    )
+                    .filter(
+                        (
+                            asset,
+                        ): asset is MarketAsset =>
+                            Boolean(asset),
+                    );
+            }, [
+                currentWatchlist,
+                assets,
+            ]);
+
+        const commitRate = (
+            symbol: string,
+            rawValue: string,
+        ) => {
+            const parsed =
+                Number(
+                    rawValue.trim(),
+                );
+
+            if (
+                !Number.isFinite(parsed) ||
+                parsed <= 0
+            ) {
+                setDraftRates(
+                    (previous) => {
+                        const next = {
+                            ...previous,
+                        };
+
+                        delete next[
+                            symbol
+                            ];
+
+                        return next;
+                    },
+                );
+
+                return;
+            }
+
+            /*
+             * Only this symbol is updated.
+             */
+            updateAssetRate(
+                symbol,
+                parsed,
+            );
+
+            setDraftRates(
+                (previous) => {
+                    const next = {
+                        ...previous,
+                    };
+
+                    delete next[
+                        symbol
+                        ];
+
+                    return next;
+                },
+            );
+        };
+
+        const changeDraftRate = (
+            symbol: string,
+            value: string,
+        ) => {
+            setDraftRates(
+                (previous) => ({
+                    ...previous,
+                    [symbol]: value,
+                }),
+            );
+        };
+
+        const moveRow = (
+            index: number,
+            direction: -1 | 1,
+        ) => {
+            const next = [
+                ...currentWatchlist,
+            ];
+
+            const target =
+                index + direction;
+
+            if (
+                target < 0 ||
+                target >= next.length
+            ) {
+                return;
+            }
+
+            /*
+             * USD cannot be moved.
+             */
+            if (
+                activeTab === 'fx' &&
+                (
+                    next[index] ===
+                    'USD' ||
+                    next[target] ===
+                    'USD'
+                )
+            ) {
+                return;
+            }
+
+            [
+                next[index],
+                next[target],
+            ] = [
+                next[target],
+                next[index],
+            ];
+
+            reorderWatchlist(
+                activeTab,
+                next,
+            );
+        };
+
+        const openPicker = () => {
+            setSearch('');
+            setPickerOpen(true);
+        };
+
+        const addAsset = (
+            symbol: string,
+        ) => {
+            addAssetToWatchlist(
+                activeTab,
+                symbol,
+            );
+
+            setPickerOpen(false);
+            setSearch('');
+        };
+
+        const removeAsset = (
+            symbol: string,
+        ) => {
+            removeAssetFromWatchlist(
+                activeTab,
+                symbol,
+            );
+        };
+
+        const changeTenor = (
+            value: typeof TENOR_OPTIONS[number],
+        ) => {
+            setTenor(value);
+            setTenorOpen(false);
+        };
+
+        const filteredPickerCatalog =
+            useMemo(() => {
+                const query =
+                    search
+                        .trim()
+                        .toLowerCase();
+
+                if (!query) {
+                    return currentCatalog;
+                }
+
+                return currentCatalog.filter(
+                    (asset) =>
+                        asset.name
+                            .toLowerCase()
+                            .includes(query) ||
+                        (
+                            asset.displaySymbol ??
+                            asset.symbol
+                        )
+                            .toLowerCase()
+                            .includes(query) ||
+                        asset.symbol
+                            .toLowerCase()
+                            .includes(query),
+                );
+            }, [
+                currentCatalog,
+                search,
+            ]);
+
+        return (
+            <SafeAreaView
                 style={[
-                  styles.logo,
-                  { color: colors.accent },
+                    styles.container,
+                    {
+                        backgroundColor:
+                        colors.background,
+                    },
                 ]}
             >
-              X2
-            </Text>
+                <StatusBar
+                    barStyle={
+                        darkMode
+                            ? 'light-content'
+                            : 'dark-content'
+                    }
+                    backgroundColor={
+                        colors.surface
+                    }
+                />
 
-            <Text
-                style={[
-                  styles.headerTitle,
-                  { color: colors.text },
-                ]}
-            >
-              {TABS.find(
-                  (tab) => tab.key === activeTab,
-              )?.label || 'Forex'}
-            </Text>
+                {/* ---------------------------------------------------------------- */}
+                {/* HEADER                                                           */}
+                {/* ---------------------------------------------------------------- */}
 
-            <View style={styles.headerActions}>
-              {!isEditMode && activeTab !== 'portfolio' && (
-                  <TouchableOpacity
-                      accessibilityLabel="Edit watchlist"
-                      onPress={startEditing}
-                      style={styles.headerAction}
-                  >
-                    <Text
-                        style={[
-                          styles.headerActionText,
-                          { color: colors.text },
-                        ]}
-                    >
-                      ✎
-                    </Text>
-                  </TouchableOpacity>
-              )}
-
-              {!isEditMode && activeTab !== 'portfolio' && (
-                  <TouchableOpacity
-                      accessibilityLabel="Refresh rates"
-                      onPress={() => forceRefresh()}
-                      style={styles.headerAction}
-                  >
-                    <Text
-                        style={[
-                          styles.headerActionText,
-                          { color: colors.text },
-                        ]}
-                    >
-                      ↻
-                    </Text>
-                  </TouchableOpacity>
-              )}
-
-              <View
-                  style={[
-                    styles.liveContainer,
-                    { backgroundColor: colors.surface2 },
-                  ]}
-              >
                 <View
                     style={[
-                      styles.liveDot,
-                      {
-                        backgroundColor: isOnline
-                            ? colors.green
-                            : colors.red,
-                      },
-                    ]}
-                />
-                <Text
-                    style={[
-                      styles.liveText,
-                      { color: colors.text },
+                        styles.header,
+                        {
+                            backgroundColor:
+                            colors.surface,
+
+                            borderBottomColor:
+                            colors.border,
+                        },
                     ]}
                 >
-                  {isLoading
-                      ? 'Sync'
-                      : isOnline
-                          ? 'Live'
-                          : 'Offline'}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* CATEGORY TABS */}
-        {!isEditMode && (
-            <View
-                style={[
-                  styles.categoryBar,
-                  {
-                    backgroundColor: colors.surface,
-                    borderBottomColor: colors.border,
-                  },
-                ]}
-            >
-              {TABS.filter(
-                  (tab) => tab.key !== 'portfolio',
-              ).map((tab) => (
-                  <TouchableOpacity
-                      key={tab.key}
-                      style={[
-                        styles.categoryButton,
-                        activeTab === tab.key && {
-                          backgroundColor:
-                          colors.accentStrong,
-                        },
-                      ]}
-                      onPress={() =>
-                          setActiveTab(tab.key)
-                      }
-                  >
-                    <Text
-                        style={[
-                          styles.categoryText,
-                          {
-                            color:
-                                activeTab === tab.key
-                                    ? '#ffffff'
-                                    : colors.muted,
-                          },
-                        ]}
+                    <View
+                        style={styles.headerRow}
                     >
-                      {tab.key === 'crypto'
-                          ? '₿ Crypto'
-                          : tab.key === 'metals'
-                              ? '🪙 Metals'
-                              : 'Forex'}
-                    </Text>
-                  </TouchableOpacity>
-              ))}
-            </View>
-        )}
-
-        {/* CONTENT */}
-        {activeTab === 'portfolio' ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>
-                🚧
-              </Text>
-              <Text
-                  style={[
-                    styles.emptyText,
-                    { color: colors.muted },
-                  ]}
-              >
-                Portfolio is under construction
-              </Text>
-            </View>
-        ) : (
-            <ScrollView
-                style={styles.content}
-                contentContainerStyle={
-                  isEditMode
-                      ? styles.editContent
-                      : undefined
-                }
-            >
-              {!isEditMode && (
-                  <View
-                      style={[
-                        styles.tableHeader,
-                        {
-                          borderBottomColor:
-                          colors.border,
-                        },
-                      ]}
-                  >
-                    <Text
-                        style={[
-                          styles.tableHeaderText,
-                          styles.assetColumn,
-                          { color: colors.dim },
-                        ]}
-                    >
-                      Asset
-                    </Text>
-
-                    <Text
-                        style={[
-                          styles.tableHeaderText,
-                          styles.rateColumn,
-                          { color: colors.dim },
-                        ]}
-                    >
-                      Rate
-                    </Text>
-
-                    <TouchableOpacity
-                        style={styles.changeColumn}
-                        onPress={() =>
-                            setTenorOpen(!tenorOpen)
-                        }
-                    >
-                      <Text
-                          style={[
-                            styles.tableHeaderText,
-                            { color: colors.dim },
-                          ]}
-                      >
-                        % {tenor} ▾
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-              )}
-
-              {tenorOpen && !isEditMode && (
-                  <View
-                      style={[
-                        styles.tenorMenu,
-                        {
-                          backgroundColor:
-                          colors.surface2,
-                          borderColor: colors.border,
-                        },
-                      ]}
-                  >
-                    {TENOR_OPTIONS.map((option) => (
                         <TouchableOpacity
-                            key={option}
-                            style={[
-                              styles.tenorOption,
-                              option === tenor && {
-                                backgroundColor:
-                                colors.accentStrong,
-                              },
-                            ]}
-                            onPress={() => {
-                              setTenor(option);
-                              setTenorOpen(false);
-                            }}
-                        >
-                          <Text
-                              style={{
-                                color:
-                                    option === tenor
-                                        ? '#ffffff'
-                                        : colors.text,
-                              }}
-                          >
-                            {option}
-                          </Text>
-                        </TouchableOpacity>
-                    ))}
-                  </View>
-              )}
-
-              {isEditMode && (
-                  <View
-                      style={[
-                        styles.editHint,
-                        { color: colors.muted },
-                      ]}
-                  >
-                    <Text
-                        style={{
-                          color: colors.muted,
-                          fontSize: 11,
-                        }}
-                    >
-                      Drag with ↑ ↓ to reorder. Remove
-                      with −.
-                    </Text>
-                  </View>
-              )}
-
-              {currentWatchlist.map(
-                  (symbol, index) => {
-                    const asset = assets[symbol];
-
-                    if (!asset) return null;
-
-                    const value =
-                        inputValues[symbol] ??
-                        formatRate(asset.rate);
-
-                    const isUsd =
-                        activeTab === 'fx' &&
-                        symbol === 'USD';
-
-                    if (isEditMode) {
-                      return (
-                          <View
-                              key={symbol}
-                              style={[
-                                styles.editRow,
-                                {
-                                  backgroundColor:
-                                  colors.surface,
-                                  borderBottomColor:
-                                  colors.border,
-                                },
-                              ]}
-                          >
-                            <View
-                                style={styles.reorderButtons}
-                            >
-                              <TouchableOpacity
-                                  disabled={
-                                      index === 0 ||
-                                      isUsd
-                                  }
-                                  onPress={() =>
-                                      moveRow(index, -1)
-                                  }
-                              >
-                                <Text
-                                    style={[
-                                      styles.arrow,
-                                      {
-                                        color:
-                                            index === 0 ||
-                                            isUsd
-                                                ? colors.border
-                                                : colors.text,
-                                      },
-                                    ]}
-                                >
-                                  ↑
-                                </Text>
-                              </TouchableOpacity>
-
-                              <TouchableOpacity
-                                  disabled={
-                                      index ===
-                                      currentWatchlist.length -
-                                      1 ||
-                                      isUsd
-                                  }
-                                  onPress={() =>
-                                      moveRow(index, 1)
-                                  }
-                              >
-                                <Text
-                                    style={[
-                                      styles.arrow,
-                                      {
-                                        color:
-                                            index ===
-                                            currentWatchlist.length -
-                                            1 ||
-                                            isUsd
-                                                ? colors.border
-                                                : colors.text,
-                                      },
-                                    ]}
-                                >
-                                  ↓
-                                </Text>
-                              </TouchableOpacity>
-                            </View>
-
-                            <View style={styles.editAsset}>
-                              <Text
-                                  style={[
-                                    styles.assetSymbol,
-                                    { color: colors.text },
-                                  ]}
-                              >
-                                {asset.symbol}
-                              </Text>
-                              <Text
-                                  numberOfLines={1}
-                                  style={[
-                                    styles.assetName,
-                                    { color: colors.dim },
-                                  ]}
-                              >
-                                {asset.name}
-                              </Text>
-                            </View>
-
-                            <TouchableOpacity
-                                disabled={isUsd}
-                                accessibilityLabel={
-                                  isUsd
-                                      ? 'USD cannot be removed'
-                                      : `Remove ${asset.symbol}`
-                                }
-                                onPress={() =>
-                                    removeSelected(symbol)
-                                }
-                                style={[
-                                  styles.removeButton,
-                                  {
-                                    opacity: isUsd
-                                        ? 0.25
-                                        : 1,
-                                  },
-                                ]}
-                            >
-                              <Text
-                                  style={[
-                                    styles.removeText,
-                                    { color: colors.red },
-                                  ]}
-                              >
-                                −
-                              </Text>
-                            </TouchableOpacity>
-                          </View>
-                      );
-                    }
-
-                    return (
-                        <View
-                            key={symbol}
-                            style={[
-                              styles.row,
-                              {
-                                borderBottomColor:
-                                colors.border,
-                              },
-                            ]}
-                        >
-                          <View
-                              style={[
-                                styles.assetColumn,
-                                styles.assetCell,
-                              ]}
-                          >
-                            <Text
-                                style={[
-                                  styles.assetSymbol,
-                                  { color: colors.text },
-                                ]}
-                            >
-                              {activeTab === 'crypto' &&
-                              symbol === 'BTC'
-                                  ? '₿ BTC'
-                                  : assetLabel(
-                                      asset,
-                                      activeTab,
-                                  )}
-                            </Text>
-
-                            <Text
-                                numberOfLines={1}
-                                style={[
-                                  styles.assetName,
-                                  { color: colors.dim },
-                                ]}
-                            >
-                              {asset.name}
-                            </Text>
-                          </View>
-
-                          <View
-                              style={[
-                                styles.rateColumn,
-                                styles.rateCell,
-                              ]}
-                          >
-                            <TextInput
-                                keyboardType="numeric"
-                                value={value}
-                                onChangeText={(text) =>
-                                    handleRateChange(
-                                        symbol,
-                                        text,
-                                    )
-                                }
-                                selectTextOnFocus
-                                style={[
-                                  styles.rateInput,
-                                  {
-                                    color: colors.accent,
-                                    backgroundColor:
-                                    colors.surface,
-                                    borderColor:
-                                        asset.isCustomEdited
-                                            ? colors.yellow
-                                            : colors.border,
-                                  },
-                                ]}
-                                accessibilityLabel={`Rate for ${asset.symbol}`}
-                            />
-                          </View>
-
-                          <View
-                              style={[
-                                styles.changeColumn,
-                                styles.changeCell,
-                              ]}
-                          >
-                            <Text
-                                style={[
-                                  styles.changeText,
-                                  {
-                                    color:
-                                        asset.changePct >= 0
-                                            ? colors.green
-                                            : colors.red,
-                                  },
-                                ]}
-                            >
-                              {asset.changePct >= 0
-                                  ? '+'
-                                  : ''}
-                              {asset.changePct.toFixed(2)}%
-                            </Text>
-                          </View>
-                        </View>
-                    );
-                  },
-              )}
-
-              {isEditMode && (
-                  <TouchableOpacity
-                      style={[
-                        styles.addButton,
-                        {
-                          backgroundColor:
-                          colors.surface2,
-                          borderColor: colors.accent,
-                        },
-                      ]}
-                      onPress={openAdd}
-                  >
-                    <Text
-                        style={[
-                          styles.addButtonText,
-                          { color: colors.accent },
-                        ]}
-                    >
-                      + Add{' '}
-                      {activeTab === 'fx'
-                          ? 'Currency'
-                          : activeTab === 'crypto'
-                              ? 'Crypto'
-                              : 'Metal'}
-                    </Text>
-                  </TouchableOpacity>
-              )}
-            </ScrollView>
-        )}
-
-        {/* EDIT FOOTER */}
-        {isEditMode && (
-            <View
-                style={[
-                  styles.editFooter,
-                  {
-                    backgroundColor: colors.surface,
-                    borderTopColor: colors.border,
-                  },
-                ]}
-            >
-              <TouchableOpacity
-                  style={[
-                    styles.cancelButton,
-                    { borderColor: colors.border },
-                  ]}
-                  onPress={cancelEditing}
-              >
-                <Text
-                    style={[
-                      styles.cancelText,
-                      { color: colors.muted },
-                    ]}
-                >
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                  style={[
-                    styles.applyButton,
-                    { backgroundColor: colors.accentStrong },
-                  ]}
-                  onPress={() => applyEditing()}
-              >
-                <Text style={styles.applyText}>
-                  Apply
-                </Text>
-              </TouchableOpacity>
-            </View>
-        )}
-
-        {!isEditMode && (
-            <View
-                style={[
-                  styles.footer,
-                  {
-                    backgroundColor: colors.surface,
-                    borderTopColor: colors.border,
-                  },
-                ]}
-            >
-              <Text
-                  style={[
-                    styles.footerText,
-                    { color: colors.dim },
-                  ]}
-              >
-                {isLoading
-                    ? 'Updating rates…'
-                    : `Next refresh in ${countdown}s • Last synced ${
-                        lastSynced
-                            ? new Date(
-                                lastSynced,
-                            ).toLocaleTimeString()
-                            : '—'
-                    }`}
-              </Text>
-            </View>
-        )}
-
-        {/* ADD ASSET POPUP */}
-        <Modal
-            visible={addOpen}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setAddOpen(false)}
-        >
-          <View style={styles.modalBackdrop}>
-            <View
-                style={[
-                  styles.addModal,
-                  {
-                    backgroundColor:
-                    colors.surface2,
-                    borderColor: colors.border,
-                  },
-                ]}
-            >
-              <View style={styles.modalHeader}>
-                <Text
-                    style={[
-                      styles.modalTitle,
-                      { color: colors.text },
-                    ]}
-                >
-                  Add{' '}
-                  {activeTab === 'fx'
-                      ? 'Currency'
-                      : activeTab === 'crypto'
-                          ? 'Crypto'
-                          : 'Metal'}
-                </Text>
-
-                <TouchableOpacity
-                    onPress={() =>
-                        setAddOpen(false)
-                    }
-                >
-                  <Text
-                      style={[
-                        styles.closeText,
-                        { color: colors.muted },
-                      ]}
-                  >
-                    ✕
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <TextInput
-                  autoFocus
-                  value={search}
-                  onChangeText={setSearch}
-                  placeholder={
-                    activeTab === 'fx'
-                        ? 'India or INR'
-                        : activeTab === 'crypto'
-                            ? 'Bitcoin or BTC'
-                            : 'Gold or XAU'
-                  }
-                  placeholderTextColor={colors.dim}
-                  style={[
-                    styles.searchInput,
-                    {
-                      color: colors.text,
-                      backgroundColor:
-                      colors.surface,
-                      borderColor: colors.border,
-                    },
-                  ]}
-              />
-
-              <Text
-                  style={[
-                    styles.matchingLabel,
-                    { color: colors.dim },
-                  ]}
-              >
-                Matching
-              </Text>
-
-              <ScrollView
-                  style={styles.results}
-                  keyboardShouldPersistTaps="handled"
-              >
-                {filteredCatalog.map((asset) => {
-                  const alreadyAdded =
-                      currentWatchlist.includes(
-                          asset.symbol,
-                      );
-
-                  return (
-                      <TouchableOpacity
-                          key={asset.symbol}
-                          disabled={alreadyAdded}
-                          style={[
-                            styles.resultRow,
-                            {
-                              borderBottomColor:
-                              colors.border,
-                              opacity: alreadyAdded
-                                  ? 0.4
-                                  : 1,
-                            },
-                          ]}
-                          onPress={() =>
-                              addSelected(
-                                  asset.symbol,
-                              )
-                          }
-                      >
-                        <View
+                            onPress={() =>
+                                setSettingsOpen(
+                                    true,
+                                )
+                            }
+                            accessibilityLabel="Open settings"
                             style={
-                              styles.resultSymbolContainer
+                                styles.menuButton
                             }
                         >
-                          <Text
-                              style={[
-                                styles.resultSymbol,
-                                { color: colors.text },
-                              ]}
-                          >
-                            {asset.symbol}
-                          </Text>
+                            <Text
+                                style={[
+                                    styles.menu,
+                                    {
+                                        color:
+                                        colors.text,
+                                    },
+                                ]}
+                            >
+                                ☰
+                            </Text>
+                        </TouchableOpacity>
 
-                          <Text
-                              style={[
-                                styles.resultName,
-                                { color: colors.muted },
-                              ]}
-                          >
-                            {asset.name}
-                          </Text>
+                        <Text
+                            style={[
+                                styles.logo,
+                                {
+                                    color:
+                                    colors.accent,
+                                },
+                            ]}
+                        >
+                            X2
+                        </Text>
+
+                        <View
+                            style={
+                                styles.titleContainer
+                            }
+                        >
+                            <Text
+                                style={[
+                                    styles.title,
+                                    {
+                                        color:
+                                        colors.text,
+                                    },
+                                ]}
+                            >
+                                {
+                                    TAB_TITLES[
+                                        activeTab
+                                        ]
+                                }
+                            </Text>
+
+                            <View
+                                style={
+                                    styles.status
+                                }
+                            >
+                                <View
+                                    style={[
+                                        styles.statusDot,
+                                        {
+                                            backgroundColor:
+                                                isOnline
+                                                    ? colors.positive
+                                                    : colors.negative,
+                                        },
+                                    ]}
+                                />
+
+                                <Text
+                                    style={[
+                                        styles.statusText,
+                                        {
+                                            color:
+                                            colors.muted,
+                                        },
+                                    ]}
+                                >
+                                    {isLoading
+                                        ? 'Syncing'
+                                        : isOnline
+                                            ? 'Live'
+                                            : 'Offline'}
+                                </Text>
+                            </View>
                         </View>
 
-                        {alreadyAdded && (
-                            <Text
-                                style={{
-                                  color: colors.green,
-                                  fontSize: 12,
-                                }}
-                            >
-                              Added
-                            </Text>
-                        )}
-                      </TouchableOpacity>
-                  );
-                })}
+                        <View
+                            style={
+                                styles.headerActions
+                            }
+                        >
+                            {activeTab !==
+                                'portfolio' &&
+                                !isEditMode && (
+                                    <>
+                                        <TouchableOpacity
+                                            onPress={
+                                                startEditing
+                                            }
+                                            style={
+                                                styles.headerButton
+                                            }
+                                            accessibilityLabel="Edit watchlist"
+                                        >
+                                            <Text
+                                                style={[
+                                                    styles.headerButtonText,
+                                                    {
+                                                        color:
+                                                        colors.text,
+                                                    },
+                                                ]}
+                                            >
+                                                ✎
+                                            </Text>
+                                        </TouchableOpacity>
 
-                {filteredCatalog.length === 0 && (
-                    <Text
-                        style={[
-                          styles.noResults,
-                          { color: colors.muted },
-                        ]}
-                    >
-                      No matching assets
-                    </Text>
-                )}
-              </ScrollView>
+                                        <RefreshTimer
+                                            countdown={
+                                                countdown
+                                            }
+                                            totalSeconds={
+                                                REFRESH_INTERVAL_SECONDS
+                                            }
+                                            color={
+                                                colors.accent
+                                            }
+                                            backgroundColor={
+                                                colors.border
+                                            }
+                                            disabled={
+                                                isLoading
+                                            }
+                                            onPress={() =>
+                                                void forceRefresh()
+                                            }
+                                        />
+                                    </>
+                                )}
 
-              <View style={styles.modalFooter}>
-                <TouchableOpacity
-                    style={[
-                      styles.modalCancel,
-                      {
-                        borderColor: colors.border,
-                      },
-                    ]}
-                    onPress={() =>
-                        setAddOpen(false)
-                    }
-                >
-                  <Text
-                      style={{
-                        color: colors.muted,
-                        fontWeight: '700',
-                      }}
-                  >
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
+                            {isEditMode && (
+                                <Text
+                                    style={[
+                                        styles.editingLabel,
+                                        {
+                                            color:
+                                            colors.warning,
+                                        },
+                                    ]}
+                                >
+                                    EDIT
+                                </Text>
+                            )}
+                        </View>
+                    </View>
+                </View>
 
-        {/* SETTINGS */}
-        <Modal
-            visible={settingsOpen}
-            transparent
-            animationType="slide"
-            onRequestClose={() =>
-                setSettingsOpen(false)
-            }
-        >
-          <View style={styles.modalBackdrop}>
-            <View
-                style={[
-                  styles.settingsModal,
-                  {
-                    backgroundColor:
-                    colors.surface2,
-                    borderColor: colors.border,
-                  },
-                ]}
-            >
-              <View style={styles.modalHeader}>
-                <Text
-                    style={[
-                      styles.modalTitle,
-                      { color: colors.text },
-                    ]}
-                >
-                  Settings
-                </Text>
+                {/* ---------------------------------------------------------------- */}
+                {/* CONTENT                                                          */}
+                {/* ---------------------------------------------------------------- */}
 
-                <TouchableOpacity
-                    onPress={() =>
-                        setSettingsOpen(false)
-                    }
-                >
-                  <Text
-                      style={[
-                        styles.closeText,
-                        { color: colors.muted },
-                      ]}
-                  >
-                    ✕
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <Text
-                  style={[
-                    styles.settingsLabel,
-                    { color: colors.muted },
-                  ]}
-              >
-                Theme
-              </Text>
-
-              <View style={styles.themeRow}>
-                {themeButton(
-                    'system',
-                    'System',
-                )}
-                {themeButton(
-                    'light',
-                    'Light',
-                )}
-                {themeButton(
-                    'dark',
-                    'Dark',
-                )}
-              </View>
-
-              <Text
-                  style={[
-                    styles.settingsLabel,
-                    { color: colors.muted },
-                  ]}
-              >
-                Decimal Places
-              </Text>
-
-              <View style={styles.themeRow}>
-                {[2, 3, 4].map((dp) => (
-                    <TouchableOpacity
-                        key={dp}
-                        style={[
-                          styles.themeButton,
-                          {
-                            backgroundColor:
-                                decimalPlaces === dp
-                                    ? colors.accentStrong
-                                    : colors.surface,
-                            borderColor:
-                                decimalPlaces === dp
-                                    ? colors.accent
-                                    : colors.border,
-                          },
-                        ]}
-                        onPress={() =>
-                            setDecimalPlaces(
-                                dp as DecimalPlaces,
-                            )
+                {activeTab ===
+                'portfolio' ? (
+                    <View
+                        style={
+                            styles.portfolio
                         }
                     >
-                      <Text
-                          style={{
-                            color:
-                                decimalPlaces === dp
-                                    ? '#ffffff'
-                                    : colors.muted,
-                            fontWeight: '700',
-                          }}
-                      >
-                        {dp}
-                      </Text>
-                    </TouchableOpacity>
-                ))}
-              </View>
-
-              <Text
-                  style={[
-                    styles.settingsLabel,
-                    { color: colors.muted },
-                  ]}
-              >
-                Refresh
-              </Text>
-
-              <Text
-                  style={[
-                    styles.settingsInfo,
-                    { color: colors.muted },
-                  ]}
-              >
-                Rates automatically refresh every{' '}
-                {REFRESH_INTERVAL_SECONDS / 60} minutes.
-              </Text>
-
-              <Text
-                  style={[
-                    styles.settingsLabel,
-                    { color: colors.muted },
-                  ]}
-              >
-                FX
-              </Text>
-
-              <Text
-                  style={[
-                    styles.settingsInfo,
-                    { color: colors.muted },
-                  ]}
-              >
-                USD is always the first currency.
-                G10 currencies are available in the
-                Add Currency search.
-              </Text>
-
-              <TouchableOpacity
-                  style={[
-                    styles.settingsDone,
-                    {
-                      backgroundColor:
-                      colors.accentStrong,
-                    },
-                  ]}
-                  onPress={() =>
-                      setSettingsOpen(false)
-                  }
-              >
-                <Text
-                    style={styles.settingsDoneText}
-                >
-                  Done
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-      </SafeAreaView>
-  );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-
-  header: {
-    borderBottomWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 9,
-  },
-
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 34,
-  },
-
-  headerIconButton: {
-    padding: 4,
-    marginRight: 8,
-  },
-
-  headerIcon: {
-    fontSize: 21,
-  },
-
-  logo: {
-    fontSize: 21,
-    fontWeight: '900',
-    letterSpacing: 1,
-    marginRight: 18,
-  },
-
-  headerTitle: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '800',
-  },
-
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-
-  headerAction: {
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-  },
-
-  headerActionText: {
-    fontSize: 21,
-  },
-
-  liveContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-  },
-
-  liveDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    marginRight: 4,
-  },
-
-  liveText: {
-    fontSize: 10,
-    fontWeight: '800',
-  },
-
-  categoryBar: {
-    flexDirection: 'row',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-  },
-
-  categoryButton: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 7,
-    borderRadius: 7,
-    marginHorizontal: 2,
-  },
-
-  categoryText: {
-    fontSize: 12,
-    fontWeight: '800',
-  },
-
-  content: {
-    flex: 1,
-    paddingHorizontal: 10,
-  },
-
-  editContent: {
-    paddingBottom: 15,
-  },
-
-  tableHeader: {
-    flexDirection: 'row',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-  },
-
-  tableHeaderText: {
-    fontSize: 10,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-  },
-
-  assetColumn: {
-    flex: 2,
-  },
-
-  rateColumn: {
-    flex: 1.5,
-  },
-
-  changeColumn: {
-    flex: 1,
-    alignItems: 'flex-end',
-  },
-
-  assetCell: {
-    justifyContent: 'center',
-  },
-
-  rateCell: {
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-
-  changeCell: {
-    justifyContent: 'center',
-  },
-
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 57,
-    borderBottomWidth: 1,
-  },
-
-  assetSymbol: {
-    fontSize: 14,
-    fontWeight: '800',
-  },
-
-  assetName: {
-    fontSize: 10,
-    marginTop: 2,
-  },
-
-  rateInput: {
-    minWidth: 82,
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-    textAlign: 'right',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-
-  changeText: {
-    fontSize: 12,
-    fontWeight: '800',
-  },
-
-  tenorMenu: {
-    position: 'absolute',
-    right: 5,
-    top: 34,
-    zIndex: 20,
-    borderWidth: 1,
-    borderRadius: 7,
-    overflow: 'hidden',
-  },
-
-  tenorOption: {
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-  },
-
-  editHint: {
-    paddingVertical: 8,
-  },
-
-  editRow: {
-    minHeight: 58,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderRadius: 5,
-    marginBottom: 2,
-  },
-
-  reorderButtons: {
-    width: 38,
-    alignItems: 'center',
-  },
-
-  arrow: {
-    fontSize: 16,
-    fontWeight: '900',
-    lineHeight: 18,
-  },
-
-  editAsset: {
-    flex: 1,
-    paddingHorizontal: 5,
-  },
-
-  removeButton: {
-    width: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  removeText: {
-    fontSize: 27,
-    fontWeight: '500',
-  },
-
-  addButton: {
-    marginTop: 12,
-    paddingVertical: 12,
-    borderRadius: 7,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-
-  addButtonText: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
-
-  editFooter: {
-    flexDirection: 'row',
-    gap: 10,
-    padding: 9,
-    borderTopWidth: 1,
-  },
-
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 7,
-    borderWidth: 1,
-  },
-
-  cancelText: {
-    fontWeight: '800',
-  },
-
-  applyButton: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 7,
-  },
-
-  applyText: {
-    color: '#ffffff',
-    fontWeight: '900',
-  },
-
-  footer: {
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    borderTopWidth: 1,
-  },
-
-  footerText: {
-    fontSize: 9,
-  },
-
-  empty: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  emptyIcon: {
-    fontSize: 40,
-    marginBottom: 10,
-  },
-
-  emptyText: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-
-  addModal: {
-    width: '100%',
-    maxHeight: '82%',
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
-  },
-
-  settingsModal: {
-    width: '100%',
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 18,
-  },
-
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-  },
-
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '900',
-  },
-
-  closeText: {
-    fontSize: 18,
-  },
-
-  searchInput: {
-    borderWidth: 1,
-    borderRadius: 7,
-    paddingHorizontal: 11,
-    paddingVertical: 9,
-    fontSize: 14,
-  },
-
-  matchingLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    marginTop: 15,
-    marginBottom: 5,
-  },
-
-  results: {
-    maxHeight: 340,
-  },
-
-  resultRow: {
-    minHeight: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-  },
-
-  resultSymbolContainer: {
-    flex: 1,
-  },
-
-  resultSymbol: {
-    fontSize: 14,
-    fontWeight: '900',
-  },
-
-  resultName: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-
-  noResults: {
-    textAlign: 'center',
-    paddingVertical: 25,
-    fontSize: 13,
-  },
-
-  modalFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 14,
-  },
-
-  modalCancel: {
-    paddingHorizontal: 18,
-    paddingVertical: 9,
-    borderRadius: 7,
-    borderWidth: 1,
-  },
-
-  settingsLabel: {
-    fontSize: 10,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-    marginTop: 12,
-    marginBottom: 7,
-  },
-
-  settingsInfo: {
-    fontSize: 12,
-    lineHeight: 18,
-  },
-
-  themeRow: {
-    flexDirection: 'row',
-    gap: 7,
-  },
-
-  themeButton: {
-    flex: 1,
-    paddingVertical: 9,
-    borderRadius: 7,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-
-  themeButtonText: {
-    fontSize: 12,
-    fontWeight: '800',
-  },
-
-  settingsDone: {
-    marginTop: 20,
-    paddingVertical: 10,
-    borderRadius: 7,
-    alignItems: 'center',
-  },
-
-  settingsDoneText: {
-    color: '#ffffff',
-    fontWeight: '900',
-  },
-});
+                        <Text
+                            style={
+                                styles.portfolioIcon
+                            }
+                        >
+                            ▦
+                        </Text>
+
+                        <Text
+                            style={[
+                                styles.portfolioTitle,
+                                {
+                                    color:
+                                    colors.text,
+                                },
+                            ]}
+                        >
+                            Portfolio
+                        </Text>
+
+                        <Text
+                            style={[
+                                styles.portfolioText,
+                                {
+                                    color:
+                                    colors.muted,
+                                },
+                            ]}
+                        >
+                            Under Construction
+                        </Text>
+                    </View>
+                ) : (
+                    <>
+                        {!isEditMode && (
+                            <View
+                                style={[
+                                    styles.tableHeader,
+                                    {
+                                        borderBottomColor:
+                                        colors.border,
+                                    },
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.headerCell,
+                                        styles.assetHeader,
+                                        {
+                                            color:
+                                            colors.dim,
+                                        },
+                                    ]}
+                                >
+                                    Asset
+                                </Text>
+
+                                <Text
+                                    style={[
+                                        styles.headerCell,
+                                        styles.rateHeader,
+                                        {
+                                            color:
+                                            colors.dim,
+                                        },
+                                    ]}
+                                >
+                                    Rate
+                                </Text>
+
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        setTenorOpen(
+                                            (open) =>
+                                                !open,
+                                        )
+                                    }
+                                    style={[
+                                        styles.tenorHeader,
+                                    ]}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.headerCell,
+                                            {
+                                                color:
+                                                colors.dim,
+                                            },
+                                        ]}
+                                    >
+                                        % {tenor}{' '}
+                                        ▾
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
+                        {tenorOpen &&
+                            !isEditMode && (
+                                <View
+                                    style={[
+                                        styles.tenorMenu,
+                                        {
+                                            backgroundColor:
+                                            colors.surfaceElevated,
+
+                                            borderColor:
+                                            colors.border,
+                                        },
+                                    ]}
+                                >
+                                    {TENOR_OPTIONS.map(
+                                        (option) => (
+                                            <TouchableOpacity
+                                                key={
+                                                    option
+                                                }
+                                                onPress={() =>
+                                                    changeTenor(
+                                                        option,
+                                                    )
+                                                }
+                                                style={[
+                                                    styles.tenorOption,
+                                                    option ===
+                                                    tenor && {
+                                                        backgroundColor:
+                                                        colors.accentStrong,
+                                                    },
+                                                ]}
+                                            >
+                                                <Text
+                                                    style={{
+                                                        color:
+                                                            option ===
+                                                            tenor
+                                                                ? '#FFFFFF'
+                                                                : colors.text,
+
+                                                        fontWeight:
+                                                            '800',
+                                                    }}
+                                                >
+                                                    {option}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ),
+                                    )}
+                                </View>
+                            )}
+
+                        <ScrollView
+                            style={
+                                styles.content
+                            }
+                            contentContainerStyle={
+                                isEditMode
+                                    ? styles.editContent
+                                    : styles.marketContent
+                            }
+                            keyboardShouldPersistTaps="handled"
+                        >
+                            {isEditMode && (
+                                <View
+                                    style={[
+                                        styles.editInfo,
+                                        {
+                                            backgroundColor:
+                                            colors.surfaceElevated,
+
+                                            borderColor:
+                                            colors.border,
+                                        },
+                                    ]}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.editInfoText,
+                                            {
+                                                color:
+                                                colors.muted,
+                                            },
+                                        ]}
+                                    >
+                                        Add, remove or
+                                        move assets.
+                                        Changes apply
+                                        only to this
+                                        market.
+                                    </Text>
+                                </View>
+                            )}
+
+                            {visibleAssets.map(
+                                (
+                                    asset,
+                                    index,
+                                ) =>
+                                    isEditMode ? (
+                                        <EditRow
+                                            key={
+                                                asset.symbol
+                                            }
+                                            asset={
+                                                asset
+                                            }
+                                            index={
+                                                index
+                                            }
+                                            count={
+                                                visibleAssets.length
+                                            }
+                                            locked={
+                                                activeTab ===
+                                                'fx' &&
+                                                asset.symbol ===
+                                                'USD'
+                                            }
+                                            colors={
+                                                colors
+                                            }
+                                            onMove={
+                                                moveRow
+                                            }
+                                            onRemove={
+                                                removeAsset
+                                            }
+                                        />
+                                    ) : (
+                                        <MarketRow
+                                            key={
+                                                asset.symbol
+                                            }
+                                            asset={
+                                                asset
+                                            }
+                                            decimalPlaces={
+                                                decimalPlaces
+                                            }
+                                            colors={
+                                                colors
+                                            }
+                                            draftValue={
+                                                draftRates[
+                                                    asset.symbol
+                                                    ]
+                                            }
+                                            onDraftChange={
+                                                changeDraftRate
+                                            }
+                                            onCommit={
+                                                commitRate
+                                            }
+                                        />
+                                    ),
+                            )}
+
+                            {isEditMode && (
+                                <TouchableOpacity
+                                    onPress={
+                                        openPicker
+                                    }
+                                    style={[
+                                        styles.addButton,
+                                        {
+                                            borderColor:
+                                            colors.accent,
+
+                                            backgroundColor:
+                                            colors.surfaceElevated,
+                                        },
+                                    ]}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.addText,
+                                            {
+                                                color:
+                                                colors.accent,
+                                            },
+                                        ]}
+                                    >
+                                        + Add{' '}
+                                        {activeTab ===
+                                        'fx'
+                                            ? 'Currency'
+                                            : activeTab ===
+                                            'crypto'
+                                                ? 'Crypto'
+                                                : 'Metal'}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
+
+                            {!isEditMode &&
+                                visibleAssets.length ===
+                                0 && (
+                                    <View
+                                        style={
+                                            styles.empty
+                                        }
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.emptyText,
+                                                {
+                                                    color:
+                                                    colors.muted,
+                                                },
+                                            ]}
+                                        >
+                                            No assets selected
+                                        </Text>
+                                    </View>
+                                )}
+                        </ScrollView>
+
+                        {isEditMode && (
+                            <View
+                                style={[
+                                    styles.editFooter,
+                                    {
+                                        backgroundColor:
+                                        colors.surface,
+
+                                        borderTopColor:
+                                        colors.border,
+                                    },
+                                ]}
+                            >
+                                <TouchableOpacity
+                                    onPress={
+                                        cancelEditing
+                                    }
+                                    style={[
+                                        styles.footerButton,
+                                        {
+                                            borderColor:
+                                            colors.border,
+                                        },
+                                    ]}
+                                >
+                                    <Text
+                                        style={{
+                                            color:
+                                            colors.muted,
+                                            fontWeight:
+                                                '900',
+                                        }}
+                                    >
+                                        Cancel
+                                    </Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        void applyEditing()
+                                    }
+                                    style={[
+                                        styles.footerButton,
+                                        {
+                                            backgroundColor:
+                                            colors.accentStrong,
+
+                                            borderColor:
+                                            colors.accentStrong,
+                                        },
+                                    ]}
+                                >
+                                    <Text
+                                        style={{
+                                            color:
+                                                '#FFFFFF',
+                                            fontWeight:
+                                                '900',
+                                        }}
+                                    >
+                                        Apply
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </>
+                )}
+
+                {/* ---------------------------------------------------------------- */}
+                {/* BOTTOM TABS                                                     */}
+                {/* ---------------------------------------------------------------- */}
+
+                {!isEditMode && (
+                    <BottomTabs
+                        activeTab={
+                            activeTab
+                        }
+                        colors={
+                            colors
+                        }
+                        onChange={
+                            setActiveTab
+                        }
+                    />
+                )}
+
+                {/* ---------------------------------------------------------------- */}
+                {/* ADD ASSET                                                        */}
+                {/* ---------------------------------------------------------------- */}
+
+                <AssetPickerModal
+                    visible={
+                        pickerOpen
+                    }
+                    title={`Add ${
+                        activeTab ===
+                        'fx'
+                            ? 'Currency'
+                            : activeTab ===
+                            'crypto'
+                                ? 'Crypto'
+                                : 'Metal'
+                    }`}
+                    placeholder={
+                        activeTab ===
+                        'crypto'
+                            ? 'Search Bitcoin, BTC, Ethereum...'
+                            : activeTab ===
+                            'fx'
+                                ? 'Search INR, India, Euro...'
+                                : 'Search Gold, Silver, Platinum...'
+                    }
+                    assets={
+                        filteredPickerCatalog
+                    }
+                    selected={
+                        currentWatchlist
+                    }
+                    search={
+                        search
+                    }
+                    colors={
+                        colors
+                    }
+                    onSearch={
+                        setSearch
+                    }
+                    onSelect={
+                        addAsset
+                    }
+                    onClose={() =>
+                        setPickerOpen(
+                            false,
+                        )
+                    }
+                />
+
+                {/* ---------------------------------------------------------------- */}
+                {/* SETTINGS                                                         */}
+                {/* ---------------------------------------------------------------- */}
+
+                <SettingsModal
+                    visible={
+                        settingsOpen
+                    }
+                    colors={
+                        colors
+                    }
+                    theme={
+                        theme
+                    }
+                    decimalPlaces={
+                        decimalPlaces
+                    }
+                    onThemeChange={
+                        setTheme
+                    }
+                    onDecimalChange={(
+                        value,
+                    ) =>
+                        setDecimalPlaces(
+                            value,
+                        )
+                    }
+                    onClose={() =>
+                        setSettingsOpen(
+                            false,
+                        )
+                    }
+                />
+            </SafeAreaView>
+        );
+    };
+
+const styles =
+    StyleSheet.create({
+        container: {
+            flex: 1,
+        },
+
+        header: {
+            paddingHorizontal: 10,
+            paddingVertical: 9,
+            borderBottomWidth: 1,
+        },
+
+        headerRow: {
+            minHeight: 38,
+            flexDirection: 'row',
+            alignItems: 'center',
+        },
+
+        menuButton: {
+            width: 34,
+            height: 34,
+            alignItems: 'center',
+            justifyContent:
+                'center',
+        },
+
+        menu: {
+            fontSize: 21,
+            fontWeight: '700',
+        },
+
+        logo: {
+            fontSize: 21,
+            fontWeight: '950',
+            letterSpacing: 1,
+            marginHorizontal: 8,
+        },
+
+        titleContainer: {
+            flex: 1,
+            justifyContent:
+                'center',
+        },
+
+        title: {
+            fontSize: 16,
+            fontWeight: '900',
+        },
+
+        status: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginTop: 2,
+        },
+
+        statusDot: {
+            width: 6,
+            height: 6,
+            borderRadius: 3,
+            marginRight: 4,
+        },
+
+        statusText: {
+            fontSize: 9,
+            fontWeight: '800',
+        },
+
+        headerActions: {
+            flexDirection: 'row',
+            alignItems: 'center',
+        },
+
+        headerButton: {
+            width: 32,
+            height: 32,
+            alignItems: 'center',
+            justifyContent:
+                'center',
+        },
+
+        headerButtonText: {
+            fontSize: 20,
+            fontWeight: '800',
+        },
+
+        editingLabel: {
+            fontSize: 10,
+            fontWeight: '900',
+            letterSpacing: 1,
+            marginRight: 5,
+        },
+
+        tableHeader: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            minHeight: 34,
+            paddingHorizontal: 10,
+            borderBottomWidth: 1,
+        },
+
+        headerCell: {
+            fontSize: 10,
+            fontWeight: '900',
+            textTransform:
+                'uppercase',
+        },
+
+        assetHeader: {
+            flex: 2,
+        },
+
+        rateHeader: {
+            flex: 1.55,
+            textAlign: 'right',
+        },
+
+        tenorHeader: {
+            flex: 0.95,
+            alignItems: 'flex-end',
+        },
+
+        tenorMenu: {
+            position: 'absolute',
+            right: 10,
+            top: 83,
+            zIndex: 100,
+            borderWidth: 1,
+            borderRadius: 9,
+            overflow: 'hidden',
+            elevation: 8,
+        },
+
+        tenorOption: {
+            paddingHorizontal: 20,
+            paddingVertical: 10,
+        },
+
+        content: {
+            flex: 1,
+            paddingHorizontal: 10,
+        },
+
+        marketContent: {
+            paddingBottom: 10,
+        },
+
+        editContent: {
+            paddingBottom: 15,
+        },
+
+        editInfo: {
+            borderWidth: 1,
+            borderRadius: 9,
+            paddingHorizontal: 11,
+            paddingVertical: 9,
+            marginVertical: 8,
+        },
+
+        editInfoText: {
+            fontSize: 11,
+            lineHeight: 16,
+        },
+
+        addButton: {
+            marginTop: 12,
+            minHeight: 45,
+            borderWidth: 1,
+            borderRadius: 9,
+            alignItems: 'center',
+            justifyContent:
+                'center',
+        },
+
+        addText: {
+            fontSize: 13,
+            fontWeight: '900',
+        },
+
+        editFooter: {
+            flexDirection: 'row',
+            gap: 9,
+            paddingHorizontal: 10,
+            paddingVertical: 8,
+            borderTopWidth: 1,
+        },
+
+        footerButton: {
+            flex: 1,
+            minHeight: 42,
+            alignItems: 'center',
+            justifyContent:
+                'center',
+            borderRadius: 8,
+            borderWidth: 1,
+        },
+
+        portfolio: {
+            flex: 1,
+            alignItems: 'center',
+            justifyContent:
+                'center',
+        },
+
+        portfolioIcon: {
+            fontSize: 44,
+            marginBottom: 10,
+        },
+
+        portfolioTitle: {
+            fontSize: 20,
+            fontWeight: '900',
+        },
+
+        portfolioText: {
+            marginTop: 5,
+            fontSize: 13,
+            fontWeight: '700',
+        },
+
+        empty: {
+            alignItems: 'center',
+            paddingVertical: 40,
+        },
+
+        emptyText: {
+            fontSize: 13,
+            fontWeight: '700',
+        },
+    });
 
 export default MobileApplication;
