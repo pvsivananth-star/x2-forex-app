@@ -40,10 +40,20 @@ export const EditRow: React.FC<
          count,
          locked,
          colors,
+         onMove,
+         onRemove,
      }) => {
     const displaySymbol =
         asset.displaySymbol ??
         asset.symbol;
+
+    const canMoveUp =
+        !locked &&
+        index > 0;
+
+    const canMoveDown =
+        !locked &&
+        index < count - 1;
 
     return (
         <View
@@ -62,10 +72,7 @@ export const EditRow: React.FC<
                 style={styles.arrows}
             >
                 <TouchableOpacity
-                    disabled={
-                        locked ||
-                        index === 0
-                    }
+                    disabled={!canMoveUp}
                     onPress={() =>
                         onMove(
                             index,
@@ -73,16 +80,19 @@ export const EditRow: React.FC<
                         )
                     }
                     style={styles.arrowButton}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                        `Move ${displaySymbol} up`
+                    }
                 >
                     <Text
                         style={[
                             styles.arrow,
                             {
                                 color:
-                                    locked ||
-                                    index === 0
-                                        ? colors.border
-                                        : colors.text,
+                                    canMoveUp
+                                        ? colors.text
+                                        : colors.border,
                             },
                         ]}
                     >
@@ -91,11 +101,7 @@ export const EditRow: React.FC<
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                    disabled={
-                        locked ||
-                        index ===
-                        count - 1
-                    }
+                    disabled={!canMoveDown}
                     onPress={() =>
                         onMove(
                             index,
@@ -103,17 +109,19 @@ export const EditRow: React.FC<
                         )
                     }
                     style={styles.arrowButton}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                        `Move ${displaySymbol} down`
+                    }
                 >
                     <Text
                         style={[
                             styles.arrow,
                             {
                                 color:
-                                    locked ||
-                                    index ===
-                                    count - 1
-                                        ? colors.border
-                                        : colors.text,
+                                    canMoveDown
+                                        ? colors.text
+                                        : colors.border,
                             },
                         ]}
                     >
@@ -168,6 +176,10 @@ export const EditRow: React.FC<
                                 : 1,
                     },
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel={
+                    `Remove ${displaySymbol}`
+                }
             >
                 <Text
                     style={[
