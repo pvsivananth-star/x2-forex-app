@@ -28,6 +28,11 @@ interface MarketRowProps {
         symbol: string,
         value: string,
     ) => void;
+
+    // Optional focus callbacks and visual active flag
+    active?: boolean;
+    onActivate?: () => void;
+    onDeactivate?: () => void;
 }
 
 export const MarketRow: React.FC<
@@ -37,6 +42,9 @@ export const MarketRow: React.FC<
          decimalPlaces,
          colors,
          onCommit,
+         active = false,
+         onActivate,
+         onDeactivate,
      }) => {
     const displaySymbol =
         asset.displaySymbol ??
@@ -163,18 +171,22 @@ export const MarketRow: React.FC<
             >
                 <TextInput
                     value={draft}
-                    onFocus={() =>
-                        setFocused(true)
-                    }
+                    onFocus={() => {
+                        setFocused(true);
+                        onActivate?.();
+                    }}
                     onChangeText={
                         setDraft
                     }
                     onBlur={() => {
+                        // Do not commit on blur — only commit on explicit submit (enter/tab).
                         setFocused(false);
-                        commit(draft);
+                        onDeactivate?.();
                     }}
+
                     onSubmitEditing={() => {
                         setFocused(false);
+                        // Commit only when user submits (Enter/Done)
                         commit(draft);
                     }}
                     selectTextOnFocus
@@ -189,15 +201,12 @@ export const MarketRow: React.FC<
                             backgroundColor:
                             colors.surface,
 
-                            borderColor:
-                                asset.isCustomEdited
-                                    ? colors.warning
-                                    : colors.border,
+                            // Show dark border only when the parent marks this row active.
+                            // Avoid relying on local focus state for visuals so the parent-controlled
+                            // active indicator updates immediately when focus moves.
+                            borderColor: active ? '#222' : colors.border,
 
-                            borderWidth:
-                                asset.isCustomEdited
-                                    ? 1.5
-                                    : 1,
+                            borderWidth: active ? 1.5 : 1,
                         },
                     ]}
                     accessibilityLabel={

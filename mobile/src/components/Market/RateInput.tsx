@@ -5,10 +5,14 @@ export function RateInput({
                               value,
                               active,
                               onChange,
+                              onActivate,
+                              onDeactivate,
                           }: {
     value: number;
     active?: boolean;
     onChange?: (value: number) => void;
+    onActivate?: () => void;
+    onDeactivate?: () => void;
 }) {
     const inputRef =
         useRef<TextInput>(null);
@@ -62,6 +66,7 @@ export function RateInput({
 
             onFocus={() => {
                 editingRef.current = true;
+                onActivate?.();
             }}
 
             onChangeText={nextText => {
@@ -74,10 +79,13 @@ export function RateInput({
             }}
 
             onBlur={() => {
-                commit();
+                // Do not auto-commit on blur; stop editing so external updates can sync the display.
+                editingRef.current = false;
+                onDeactivate?.();
             }}
 
             onSubmitEditing={() => {
+                // Commit only on explicit submit (Enter/Done)
                 commit();
                 inputRef.current?.blur();
             }}
@@ -85,6 +93,13 @@ export function RateInput({
             style={{
                 minWidth: 84,
                 textAlign: 'right',
+
+                // Visual indicator for the active (editing) field — rely on parent-controlled `active`
+                borderWidth: active ? 1.5 : 1,
+                borderColor: active ? '#222' : undefined,
+                borderRadius: 6,
+                paddingHorizontal: 8,
+                paddingVertical: 6,
             }}
         />
     );

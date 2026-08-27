@@ -43,6 +43,9 @@ interface RateInputProps {
     externalValue: string;
     colors: any;
     isManual: boolean;
+    active?: boolean;
+    onActivate?: () => void;
+    onDeactivate?: () => void;
     onInputChange: (
         symbol: string,
         value: string,
@@ -58,6 +61,9 @@ const RateInput: React.FC<RateInputProps> = ({
                                                  externalValue,
                                                  colors,
                                                  isManual,
+                                                 active = false,
+                                                 onActivate,
+                                                 onDeactivate,
                                                  onInputChange,
                                                  onSubmitRate,
                                              }) => {
@@ -139,6 +145,7 @@ const RateInput: React.FC<RateInputProps> = ({
             onFocus={() => {
                 focusedRef.current = true;
                 setFocused(true);
+                onActivate?.();
 
                 /*
                  * Always remove thousands separators
@@ -159,12 +166,13 @@ const RateInput: React.FC<RateInputProps> = ({
                 setDraft(cleaned);
             }}
             onBlur={() => {
-                commit();
-
+                // Do not commit on blur — wait for explicit submit (Enter/Done).
                 focusedRef.current = false;
                 setFocused(false);
+                onDeactivate?.();
             }}
             onSubmitEditing={() => {
+                // Commit only when user submits (Enter/Done)
                 commit();
 
                 focusedRef.current = false;
@@ -177,10 +185,11 @@ const RateInput: React.FC<RateInputProps> = ({
                     backgroundColor:
                     colors.surface,
 
-                    borderColor:
-                        isManual
-                            ? colors.yellow
-                            : colors.border,
+                    // Use parent-controlled 'active' to show dark border immediately when focus moves.
+                    // Do not display the previous manual/yellow highlight while merely moving focus.
+                    borderColor: active ? '#222' : colors.border,
+
+                    borderWidth: active ? 1.5 : 1,
                 },
             ]}
             accessibilityLabel={
@@ -205,6 +214,7 @@ export const RateTable: React.FC<
          onSubmitRate,
          onTenorPress,
      }) => {
+         const [focusedSymbol, setFocusedSymbol] = useState<string | null>(null);
     /*
      * Non-editing values use comma separators.
      *
@@ -364,27 +374,16 @@ export const RateTable: React.FC<
                                 }
                             >
                                 <RateInput
-                                    symbol={
-                                        symbol
-                                    }
-                                    value={
-                                        value
-                                    }
-                                    externalValue={
-                                        externalValue
-                                    }
-                                    colors={
-                                        colors
-                                    }
-                                    isManual={
-                                        isManual
-                                    }
-                                    onInputChange={
-                                        onInputChange
-                                    }
-                                    onSubmitRate={
-                                        onSubmitRate
-                                    }
+                                    symbol={symbol}
+                                    value={value}
+                                    externalValue={externalValue}
+                                    colors={colors}
+                                    isManual={isManual}
+                                    active={focusedSymbol === symbol}
+                                    onActivate={() => setFocusedSymbol(symbol)}
+                                    onDeactivate={() => setFocusedSymbol(null)}
+                                    onInputChange={onInputChange}
+                                    onSubmitRate={onSubmitRate}
                                 />
                             </View>
 

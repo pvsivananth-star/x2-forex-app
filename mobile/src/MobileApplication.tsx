@@ -448,6 +448,8 @@ export const MobileApplication: React.FC =
                 search,
             ]);
 
+        const [focusedSymbol, setFocusedSymbol] = useState<string | null>(null);
+
         return (
             <SafeAreaView
                 style={[
@@ -910,6 +912,9 @@ export const MobileApplication: React.FC =
                                             onCommit={
                                                 commitRate
                                             }
+                                            active={asset.symbol === focusedSymbol}
+                                            onActivate={() => setFocusedSymbol(asset.symbol)}
+                                            onDeactivate={() => setFocusedSymbol(null)}
                                         />
                                     ),
                             )}
