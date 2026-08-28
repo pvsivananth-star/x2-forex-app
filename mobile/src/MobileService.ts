@@ -734,9 +734,9 @@ function materializeCategory(
         getCategoryState(category);
 
     return {
-        assets: {
-            ...state.assets,
-        },
+        assets: Object.fromEntries(
+            Object.entries(state.assets).map(([k, a]) => [k, {...a, value: a.rate}]),
+        ),
 
         editedRates:
             state.editedSymbol &&

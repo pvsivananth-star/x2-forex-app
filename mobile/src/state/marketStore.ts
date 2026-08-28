@@ -102,7 +102,8 @@ export const marketStore = {
                 const asset = state.assets[symbol];
                 if (!asset) return null;
                 const value = state.editedValues[symbol] ?? asset.rate;
-                return {...asset, rate: value};
+                // Compatibility: include legacy `value` property used across older components
+                return {...asset, rate: value, value};
             })
             .filter(Boolean) as MarketAsset[];
     },
