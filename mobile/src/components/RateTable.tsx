@@ -1,17 +1,8 @@
-import React from 'react';
-import {
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import React, {useEffect, useRef, useState,} from 'react';
 
-import {
-    MarketAsset,
-    TabCategory,
-    Tenor,
-} from '../MobileService';
+import {StyleSheet, Text, TextInput, TouchableOpacity, View,} from 'react-native';
+
+import {MarketAsset, TabCategory, Tenor,} from '../MobileService';
 
 interface RateTableProps {
     colors: any;
@@ -32,6 +23,168 @@ interface RateTableProps {
     onTenorPress: () => void;
 }
 
+interface RateInputProps {
+    symbol: string;
+    value: string;
+    externalValue: string;
+    colors: any;
+    isManual: boolean;
+    active?: boolean;
+    onActivate?: () => void;
+    onDeactivate?: () => void;
+    onInputChange: (
+        symbol: string,
+        value: string,
+    ) => void;
+    onSubmitRate: (
+        symbol: string,
+    ) => void;
+}
+
+const RateInput: React.FC<RateInputProps> = ({
+                                                 symbol,
+                                                 value,
+                                                 externalValue,
+                                                 colors,
+                                                 isManual,
+                                                 active = false,
+                                                 onActivate,
+                                                 onDeactivate,
+                                                 onInputChange,
+                                                 onSubmitRate,
+                                             }) => {
+    const [draft, setDraft] =
+        useState(value);
+
+    const [focused, setFocused] =
+        useState(false);
+
+    const focusedRef =
+        useRef(false);
+
+    /*
+     * External recalculation must NEVER
+     * overwrite the field while the user
+     * has focus on it.
+     */
+    useEffect(() => {
+        if (focusedRef.current) {
+            return;
+        }
+
+        setDraft(externalValue);
+    }, [externalValue]);
+
+    /*
+     * Parent inputValues can change when another
+     * field is committed. Do not disturb this
+     * field if it currently owns focus.
+     */
+    useEffect(() => {
+        if (focusedRef.current) {
+            return;
+        }
+
+        setDraft(value);
+    }, [value]);
+
+    const commit = () => {
+        const committed =
+            draft
+                .replace(/,/g, '')
+                .trim();
+
+        if (!committed) {
+            setDraft(externalValue);
+            return;
+        }
+
+        const number =
+            Number(committed);
+
+        if (
+            !Number.isFinite(number) ||
+            number <= 0
+        ) {
+            setDraft(externalValue);
+            return;
+        }
+
+        /*
+         * Tell the parent ONLY when editing
+         * has finished.
+         */
+        onInputChange(
+            symbol,
+            committed,
+        );
+
+        onSubmitRate(symbol);
+    };
+
+    return (
+        <TextInput
+            keyboardType="decimal-pad"
+            returnKeyType="done"
+            selectTextOnFocus
+            value={focused ? draft : draft}
+            onFocus={() => {
+                focusedRef.current = true;
+                setFocused(true);
+                onActivate?.();
+
+                /*
+                 * Always remove thousands separators
+                 * while this field is being edited.
+                 */
+                setDraft(
+                    draft.replace(/,/g, ''),
+                );
+            }}
+            onChangeText={(text) => {
+                /*
+                 * Never allow comma separators
+                 * inside the editable field.
+                 */
+                const cleaned =
+                    text.replace(/,/g, '');
+
+                setDraft(cleaned);
+            }}
+            onBlur={() => {
+                // Do not commit on blur — wait for explicit submit (Enter/Done).
+                focusedRef.current = false;
+                setFocused(false);
+                onDeactivate?.();
+            }}
+            onSubmitEditing={() => {
+                // Commit only when user submits (Enter/Done)
+                commit();
+
+                focusedRef.current = false;
+                setFocused(false);
+            }}
+            style={[
+                styles.input,
+                {
+                    color: colors.accent,
+                    backgroundColor:
+                    colors.surface,
+
+                    // Use parent-controlled 'active' to show dark border immediately when focus moves.
+                    // Do not display the previous manual/yellow highlight while merely moving focus.
+                    borderColor: active ? '#222' : colors.border,
+
+                    borderWidth: active ? 1.5 : 1,
+                },
+            ]}
+            accessibilityLabel={
+                `Rate for ${symbol}`
+            }
+        />
+    );
+};
+
 export const RateTable: React.FC<
     RateTableProps
 > = ({
@@ -47,8 +200,24 @@ export const RateTable: React.FC<
          onSubmitRate,
          onTenorPress,
      }) => {
-    const formatRate = (rate: number) =>
-        rate.toFixed(decimalPlaces);
+    const [focusedSymbol, setFocusedSymbol] = useState<string | null>(null);
+    /*
+     * Non-editing values use comma separators.
+     *
+     * The focused RateInput strips them locally.
+     */
+    const formatRate = (
+        rate: number,
+    ) =>
+        rate.toLocaleString(
+            'en-US',
+            {
+                minimumFractionDigits:
+                decimalPlaces,
+                maximumFractionDigits:
+                decimalPlaces,
+            },
+        );
 
     return (
         <View>
@@ -64,7 +233,10 @@ export const RateTable: React.FC<
                 <Text
                     style={[
                         styles.assetHeader,
-                        { color: colors.dim },
+                        {
+                            color:
+                            colors.dim,
+                        },
                     ]}
                 >
                     Asset
@@ -73,20 +245,30 @@ export const RateTable: React.FC<
                 <Text
                     style={[
                         styles.rateHeader,
-                        { color: colors.dim },
+                        {
+                            color:
+                            colors.dim,
+                        },
                     ]}
                 >
                     Rate
                 </Text>
 
                 <TouchableOpacity
-                    style={styles.changeHeader}
-                    onPress={onTenorPress}
+                    style={
+                        styles.changeHeader
+                    }
+                    onPress={
+                        onTenorPress
+                    }
                 >
                     <Text
                         style={[
                             styles.headerText,
-                            { color: colors.dim },
+                            {
+                                color:
+                                colors.dim,
+                            },
                         ]}
                     >
                         % {tenor} ▾
@@ -94,184 +276,220 @@ export const RateTable: React.FC<
                 </TouchableOpacity>
             </View>
 
-            {watchlist.map((symbol) => {
-                const asset = assets[symbol];
+            {watchlist.map(
+                symbol => {
+                    const asset =
+                        assets[symbol];
 
-                if (!asset) {
-                    return null;
-                }
+                    if (!asset) {
+                        return null;
+                    }
 
-                const value =
-                    inputValues[symbol] ??
-                    formatRate(asset.rate);
+                    const externalValue =
+                        formatRate(
+                            asset.rate,
+                        );
 
-                const isManual =
-                    editingSymbol === symbol &&
-                    asset.isCustomEdited;
+                    const value =
+                        inputValues[
+                            symbol
+                            ] ??
+                        externalValue;
 
-                return (
-                    <View
-                        key={symbol}
-                        style={[
-                            styles.row,
-                            {
-                                borderBottomColor:
-                                colors.border,
-                            },
-                        ]}
-                    >
-                        <View style={styles.asset}>
-                            <Text
-                                style={[
-                                    styles.symbol,
-                                    { color: colors.text },
-                                ]}
-                            >
-                                {category === 'crypto' &&
-                                symbol === 'BTC'
-                                    ? '₿ BTC'
-                                    : symbol}
-                            </Text>
+                    const isManual =
+                        editingSymbol ===
+                        symbol &&
+                        asset.isCustomEdited;
 
-                            <Text
-                                numberOfLines={1}
-                                style={[
-                                    styles.name,
-                                    { color: colors.dim },
-                                ]}
-                            >
-                                {asset.name}
-                            </Text>
-                        </View>
-
-                        <View style={styles.rate}>
-                            <TextInput
-                                keyboardType="decimal-pad"
-                                returnKeyType="done"
-                                selectTextOnFocus
-                                value={value}
-                                onChangeText={(text) =>
-                                    onInputChange(
-                                        symbol,
-                                        text,
-                                    )
+                    return (
+                        <View
+                            key={symbol}
+                            style={[
+                                styles.row,
+                                {
+                                    borderBottomColor:
+                                    colors.border,
+                                },
+                            ]}
+                        >
+                            <View
+                                style={
+                                    styles.asset
                                 }
-                                onSubmitEditing={() =>
-                                    onSubmitRate(symbol)
-                                }
-                                style={[
-                                    styles.input,
-                                    {
-                                        color: colors.accent,
-                                        backgroundColor:
-                                        colors.surface,
-                                        borderColor: isManual
-                                            ? colors.yellow
-                                            : colors.border,
-                                    },
-                                ]}
-                                accessibilityLabel={`Rate for ${symbol}`}
-                            />
-                        </View>
-
-                        <View style={styles.change}>
-                            <Text
-                                style={[
-                                    styles.changeText,
-                                    {
-                                        color:
-                                            asset.changePct >= 0
-                                                ? colors.green
-                                                : colors.red,
-                                    },
-                                ]}
                             >
-                                {asset.changePct >= 0
-                                    ? '+'
-                                    : ''}
-                                {asset.changePct.toFixed(2)}%
-                            </Text>
+                                <Text
+                                    style={[
+                                        styles.symbol,
+                                        {
+                                            color:
+                                            colors.text,
+                                        },
+                                    ]}
+                                >
+                                    {
+                                        category ===
+                                        'crypto' &&
+                                        symbol ===
+                                        'BTC'
+                                            ? '₿ BTC'
+                                            : symbol
+                                    }
+                                </Text>
+
+                                <Text
+                                    numberOfLines={
+                                        1
+                                    }
+                                    style={[
+                                        styles.name,
+                                        {
+                                            color:
+                                            colors.dim,
+                                        },
+                                    ]}
+                                >
+                                    {
+                                        asset.name
+                                    }
+                                </Text>
+                            </View>
+
+                            <View
+                                style={
+                                    styles.rate
+                                }
+                            >
+                                <RateInput
+                                    symbol={symbol}
+                                    value={value}
+                                    externalValue={externalValue}
+                                    colors={colors}
+                                    isManual={isManual}
+                                    active={focusedSymbol === symbol}
+                                    onActivate={() => setFocusedSymbol(symbol)}
+                                    onDeactivate={() => setFocusedSymbol(null)}
+                                    onInputChange={onInputChange}
+                                    onSubmitRate={onSubmitRate}
+                                />
+                            </View>
+
+                            <View
+                                style={
+                                    styles.change
+                                }
+                            >
+                                <Text
+                                    style={[
+                                        styles.changeText,
+                                        {
+                                            color:
+                                                asset.changePct >=
+                                                0
+                                                    ? colors.green
+                                                    : colors.red,
+                                        },
+                                    ]}
+                                >
+                                    {asset.changePct >=
+                                    0
+                                        ? '+'
+                                        : ''}
+                                    {asset.changePct.toFixed(
+                                        2,
+                                    )}
+                                    %
+                                </Text>
+                            </View>
                         </View>
-                    </View>
-                );
-            })}
+                    );
+                },
+            )}
         </View>
     );
 };
 
-const styles = StyleSheet.create({
-    header: {
-        flexDirection: 'row',
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-    },
+const styles =
+    StyleSheet.create({
+        header: {
+            flexDirection:
+                'row',
+            paddingVertical: 8,
+            borderBottomWidth: 1,
+        },
 
-    assetHeader: {
-        flex: 2,
-    },
+        assetHeader: {
+            flex: 2,
+        },
 
-    rateHeader: {
-        flex: 1.5,
-        fontSize: 10,
-        fontWeight: '800',
-    },
+        rateHeader: {
+            flex: 1.5,
+            fontSize: 10,
+            fontWeight: '800',
+        },
 
-    changeHeader: {
-        flex: 1,
-        alignItems: 'flex-end',
-    },
+        changeHeader: {
+            flex: 1,
+            alignItems:
+                'flex-end',
+        },
 
-    headerText: {
-        fontSize: 10,
-        fontWeight: '800',
-        textTransform: 'uppercase',
-    },
+        headerText: {
+            fontSize: 10,
+            fontWeight: '800',
+            textTransform:
+                'uppercase',
+        },
 
-    row: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        minHeight: 57,
-        borderBottomWidth: 1,
-    },
+        row: {
+            flexDirection:
+                'row',
+            alignItems:
+                'center',
+            minHeight: 57,
+            borderBottomWidth: 1,
+        },
 
-    asset: {
-        flex: 2,
-        justifyContent: 'center',
-    },
+        asset: {
+            flex: 2,
+            justifyContent:
+                'center',
+        },
 
-    symbol: {
-        fontSize: 14,
-        fontWeight: '800',
-    },
+        symbol: {
+            fontSize: 14,
+            fontWeight: '700',
+        },
 
-    name: {
-        fontSize: 10,
-        marginTop: 2,
-    },
+        name: {
+            fontSize: 10,
+            marginTop: 2,
+        },
 
-    rate: {
-        flex: 1.5,
-        alignItems: 'flex-end',
-    },
+        rate: {
+            flex: 1.5,
+            alignItems:
+                'flex-end',
+        },
+        
+        input: {
+            minWidth: 105,
+            height: 38,
+            paddingHorizontal: 8,
+            textAlign:
+                'right',
+            borderWidth: 1,
+            borderRadius: 6,
+            fontSize: 14,
+        },
 
-    input: {
-        minWidth: 82,
-        borderWidth: 1,
-        borderRadius: 6,
-        paddingHorizontal: 7,
-        paddingVertical: 4,
-        textAlign: 'right',
-        fontSize: 13,
-        fontWeight: '700',
-    },
+        change: {
+            flex: 1,
+            alignItems:
+                'flex-end',
+        },
 
-    change: {
-        flex: 1,
-        alignItems: 'flex-end',
-    },
-
-    changeText: {
-        fontSize: 12,
-        fontWeight: '800',
-    },
-});
+        changeText: {
+            fontSize: 12,
+            fontWeight: '700',
+        },
+    });

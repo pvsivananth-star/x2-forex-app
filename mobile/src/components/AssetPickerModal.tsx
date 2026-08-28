@@ -1,24 +1,10 @@
-import React, {
-    useMemo,
-} from 'react';
+import React, {useMemo,} from 'react';
 
-import {
-    FlatList,
-    Modal,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import {FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View,} from 'react-native';
 
-import {
-    MarketAsset,
-} from '../types';
+import {MarketAsset,} from '../types';
 
-import {
-    AppColors,
-} from '../theme';
+import {AppColors,} from '../theme';
 
 interface AssetPickerModalProps {
     visible: boolean;

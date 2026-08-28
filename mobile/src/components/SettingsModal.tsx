@@ -35,6 +35,8 @@ interface SettingsModalProps {
     ) => void;
 
     onClose: () => void;
+
+    onResetMarketDefaults: () => void;
 }
 
 export const SettingsModal: React.FC<
@@ -47,15 +49,14 @@ export const SettingsModal: React.FC<
          onThemeChange,
          onDecimalChange,
          onClose,
+         onResetMarketDefaults,
      }) => {
     return (
         <Modal
             visible={visible}
             transparent
             animationType="slide"
-            onRequestClose={
-                onClose
-            }
+            onRequestClose={onClose}
         >
             <View
                 style={[
@@ -72,15 +73,12 @@ export const SettingsModal: React.FC<
                         {
                             backgroundColor:
                             colors.surfaceElevated,
-
                             borderColor:
                             colors.border,
                         },
                     ]}
                 >
-                    <View
-                        style={styles.header}
-                    >
+                    <View style={styles.header}>
                         <Text
                             style={[
                                 styles.title,
@@ -94,9 +92,7 @@ export const SettingsModal: React.FC<
                         </Text>
 
                         <TouchableOpacity
-                            onPress={
-                                onClose
-                            }
+                            onPress={onClose}
                         >
                             <Text
                                 style={[
@@ -124,9 +120,7 @@ export const SettingsModal: React.FC<
                         Appearance
                     </Text>
 
-                    <View
-                        style={styles.options}
-                    >
+                    <View style={styles.options}>
                         {(
                             [
                                 ['system', 'System'],
@@ -190,9 +184,7 @@ export const SettingsModal: React.FC<
                         Decimal Places
                     </Text>
 
-                    <View
-                        style={styles.options}
-                    >
+                    <View style={styles.options}>
                         {([2, 3, 4] as const).map(
                             (value) => (
                                 <TouchableOpacity
@@ -247,6 +239,55 @@ export const SettingsModal: React.FC<
                             },
                         ]}
                     >
+                        Reset App Settings
+                    </Text>
+
+                    <Text
+                        style={[
+                            styles.info,
+                            {
+                                color:
+                                colors.muted,
+                            },
+                        ]}
+                    >
+                        Caution: Application will reset to system defaults. Your local changes will be overriden.
+                    </Text>
+
+                    <TouchableOpacity
+                        onPress={onResetMarketDefaults}
+                        style={[
+                            styles.reset,
+                            {
+                                backgroundColor:
+                                colors.surface,
+                                borderColor:
+                                colors.warning,
+                            },
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.resetText,
+                                {
+                                    color:
+                                    colors.warning,
+                                },
+                            ]}
+                        >
+                            Apply Default Settings
+                        </Text>
+                    </TouchableOpacity>
+
+                    <Text
+                        style={[
+                            styles.section,
+                            {
+                                color:
+                                colors.muted,
+                            },
+                        ]}
+                    >
                         Refresh
                     </Text>
 
@@ -259,41 +300,10 @@ export const SettingsModal: React.FC<
                             },
                         ]}
                     >
-                        Rates automatically
-                        refresh every 3
-                        minutes. Tap the
-                        circular control in
-                        the header to refresh
-                        immediately.
-                    </Text>
-
-                    <Text
-                        style={[
-                            styles.section,
-                            {
-                                color:
-                                colors.muted,
-                            },
-                        ]}
-                    >
-                        FX
-                    </Text>
-
-                    <Text
-                        style={[
-                            styles.info,
-                            {
-                                color:
-                                colors.muted,
-                            },
-                        ]}
-                    >
-                        USD is always the
-                        first currency.
-                        Currencies can be
-                        added, removed and
-                        reordered from the
-                        FX edit screen.
+                        Rates automatically refresh
+                        every 3 minutes. Tap the
+                        circular control in the header
+                        to refresh immediately.
                     </Text>
 
                     <Text
@@ -309,28 +319,19 @@ export const SettingsModal: React.FC<
                             },
                         ]}
                     >
-                        Disclaimer: Exchange rates provided in this app are for informational and indicative purposes only
-                        and do not constitute real-time quotes for trading or financial transactions.
-                        The developer assumes no legal liability or responsibility for any financial losses,
-                        damages, or decisions made based on the data provided herein.
+                        Disclaimer: Exchange rates
+                        provided in this app are for
+                        informational and indicative
+                        purposes only and do not
+                        constitute real-time quotes for
+                        trading or financial transactions.
+                        The developer assumes no legal
+                        liability or responsibility for
+                        any financial losses, damages, or
+                        decisions made based on the data
+                        provided herein.
                     </Text>
 
-                    <TouchableOpacity
-                        onPress={onClose}
-                        style={[
-                            styles.done,
-                            {
-                                backgroundColor:
-                                colors.accentStrong,
-                            },
-                        ]}
-                    >
-                        <Text
-                            style={styles.doneText}
-                        >
-                            Done
-                        </Text>
-                    </TouchableOpacity>
                 </View>
             </View>
         </Modal>
@@ -341,8 +342,7 @@ const styles =
     StyleSheet.create({
         backdrop: {
             flex: 1,
-            justifyContent:
-                'center',
+            justifyContent: 'center',
             alignItems: 'center',
             padding: 18,
         },
@@ -356,8 +356,7 @@ const styles =
 
         header: {
             flexDirection: 'row',
-            justifyContent:
-                'space-between',
+            justifyContent: 'space-between',
             alignItems: 'center',
         },
 
@@ -375,8 +374,7 @@ const styles =
             marginBottom: 8,
             fontSize: 10,
             fontWeight: '900',
-            textTransform:
-                'uppercase',
+            textTransform: 'uppercase',
         },
 
         options: {
@@ -395,6 +393,18 @@ const styles =
         info: {
             fontSize: 12,
             lineHeight: 18,
+        },
+
+        reset: {
+            marginTop: 10,
+            paddingVertical: 10,
+            borderRadius: 9,
+            borderWidth: 1,
+            alignItems: 'center',
+        },
+
+        resetText: {
+            fontWeight: '900',
         },
 
         disclaimer: {

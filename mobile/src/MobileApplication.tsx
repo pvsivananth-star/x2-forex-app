@@ -1,8 +1,4 @@
-import React, {
-    useEffect,
-    useMemo,
-    useState,
-} from 'react';
+import React, {useEffect, useMemo, useState,} from 'react';
 
 import {
     SafeAreaView,
@@ -15,52 +11,25 @@ import {
     View,
 } from 'react-native';
 
-import {
-    useMobileStore,
-    TENOR_OPTIONS,
-    REFRESH_INTERVAL_SECONDS,
-} from './MobileService';
+import {REFRESH_INTERVAL_SECONDS, TENOR_OPTIONS, useMobileStore,} from './MobileService';
 
-import {
-    TabCategory,
-    DecimalPlaces,
-    MarketAsset,
-} from './types';
+import {MarketAsset, TabCategory,} from './types';
 
-import {
-    FX_CATALOG,
-    METAL_CATALOG,
-    CRYPTO_DEFAULT_CATALOG,
-} from './catalogs';
+import {CRYPTO_DEFAULT_CATALOG, FX_CATALOG, METAL_CATALOG,} from './catalogs';
 
-import {
-    DARK_COLORS,
-    LIGHT_COLORS,
-} from './theme';
+import {DARK_COLORS, LIGHT_COLORS,} from './theme';
 
-import {
-    BottomTabs,
-} from './components/BottomTabs';
+import {BottomTabs,} from './components/BottomTabs';
 
-import {
-    RefreshTimer,
-} from './components/RefreshTimer';
+import {RefreshTimer,} from './components/RefreshTimer';
 
-import {
-    MarketRow,
-} from './components/MarketRow';
+import {MarketRow,} from './components/MarketRow';
 
-import {
-    EditRow,
-} from './components/EditRow';
+import {EditRow,} from './components/EditRow';
 
-import {
-    AssetPickerModal,
-} from './components/AssetPickerModal';
+import {AssetPickerModal,} from './components/AssetPickerModal';
 
-import {
-    SettingsModal,
-} from './components/SettingsModal';
+import {SettingsModal,} from './components/SettingsModal';
 
 const TAB_TITLES: Record<
     TabCategory,
@@ -79,7 +48,11 @@ export const MobileApplication: React.FC =
 
         const {
             activeTab,
-            tenor,
+
+            tenorFx,
+            tenorCrypto,
+            tenorMetals,
+
             decimalPlaces,
             theme,
 
@@ -119,6 +92,8 @@ export const MobileApplication: React.FC =
             forceRefresh,
             tickCountdown,
             initialize,
+
+            resetMarketDefaults,
         } =
             useMobileStore();
 
@@ -154,6 +129,13 @@ export const MobileApplication: React.FC =
         ] = useState<
             Record<string, string>
         >({});
+
+        const [
+            focusedSymbol,
+            setFocusedSymbol,
+        ] = useState<string | null>(
+            null,
+        );
 
         const darkMode =
             theme === 'dark' ||
@@ -272,6 +254,21 @@ export const MobileApplication: React.FC =
                 assets,
             ]);
 
+        /*
+         * Each market keeps its own
+         * percentage-change tenor.
+         *
+         * FX     -> tenorFx
+         * Crypto -> tenorCrypto
+         * Metals -> tenorMetals
+         */
+        const activeTenor =
+            activeTab === 'fx'
+                ? tenorFx
+                : activeTab === 'crypto'
+                    ? tenorCrypto
+                    : tenorMetals;
+
         const commitRate = (
             symbol: string,
             rawValue: string,
@@ -359,12 +356,14 @@ export const MobileApplication: React.FC =
              * USD cannot be moved.
              */
             if (
-                activeTab === 'fx' &&
                 (
-                    next[index] ===
-                    'USD' ||
-                    next[target] ===
-                    'USD'
+                    activeTab === 'fx' ||
+                    activeTab === 'crypto' ||
+                    activeTab === 'metals'
+                ) &&
+                (
+                    next[index] === 'USD' ||
+                    next[target] === 'USD'
                 )
             ) {
                 return;
@@ -479,7 +478,6 @@ export const MobileApplication: React.FC =
                         {
                             backgroundColor:
                             colors.surface,
-
                             borderBottomColor:
                             colors.border,
                         },
@@ -613,6 +611,7 @@ export const MobileApplication: React.FC =
                                     EDIT
                                 </Text>
                             )}
+
                             <View
                                 accessible={true}
                                 accessibilityLabel={
@@ -741,7 +740,7 @@ export const MobileApplication: React.FC =
                                             },
                                         ]}
                                     >
-                                        % {tenor}{' '}
+                                        % {activeTenor}{' '}
                                         ▾
                                     </Text>
                                 </TouchableOpacity>
@@ -756,7 +755,6 @@ export const MobileApplication: React.FC =
                                         {
                                             backgroundColor:
                                             colors.surfaceElevated,
-
                                             borderColor:
                                             colors.border,
                                         },
@@ -776,7 +774,7 @@ export const MobileApplication: React.FC =
                                                 style={[
                                                     styles.tenorOption,
                                                     option ===
-                                                    tenor && {
+                                                    activeTenor && {
                                                         backgroundColor:
                                                         colors.accentStrong,
                                                     },
@@ -786,10 +784,9 @@ export const MobileApplication: React.FC =
                                                     style={{
                                                         color:
                                                             option ===
-                                                            tenor
+                                                            activeTenor
                                                                 ? '#FFFFFF'
                                                                 : colors.text,
-
                                                         fontWeight:
                                                             '800',
                                                     }}
@@ -822,7 +819,6 @@ export const MobileApplication: React.FC =
                                         {
                                             backgroundColor:
                                             colors.surfaceElevated,
-
                                             borderColor:
                                             colors.border,
                                         },
@@ -867,10 +863,9 @@ export const MobileApplication: React.FC =
                                             }
                                             locked={
                                                 (
-                                                    activeTab ===
-                                                    'fx' ||
-                                                    activeTab ===
-                                                    'crypto'
+                                                    activeTab === 'fx' ||
+                                                    activeTab === 'crypto' ||
+                                                    activeTab === 'metals'
                                                 ) &&
                                                 asset.symbol ===
                                                 'USD'
@@ -910,6 +905,20 @@ export const MobileApplication: React.FC =
                                             onCommit={
                                                 commitRate
                                             }
+                                            active={
+                                                asset.symbol ===
+                                                focusedSymbol
+                                            }
+                                            onActivate={() =>
+                                                setFocusedSymbol(
+                                                    asset.symbol,
+                                                )
+                                            }
+                                            onDeactivate={() =>
+                                                setFocusedSymbol(
+                                                    null,
+                                                )
+                                            }
                                         />
                                     ),
                             )}
@@ -924,7 +933,6 @@ export const MobileApplication: React.FC =
                                         {
                                             borderColor:
                                             colors.accent,
-
                                             backgroundColor:
                                             colors.surfaceElevated,
                                         },
@@ -981,7 +989,6 @@ export const MobileApplication: React.FC =
                                     {
                                         backgroundColor:
                                         colors.surface,
-
                                         borderTopColor:
                                         colors.border,
                                     },
@@ -1020,7 +1027,6 @@ export const MobileApplication: React.FC =
                                         {
                                             backgroundColor:
                                             colors.accentStrong,
-
                                             borderColor:
                                             colors.accentStrong,
                                         },
@@ -1059,10 +1065,6 @@ export const MobileApplication: React.FC =
                         }
                     />
                 )}
-
-                {/* ---------------------------------------------------------------- */}
-                {/* ADD ASSET                                                        */}
-                {/* ---------------------------------------------------------------- */}
 
                 <AssetPickerModal
                     visible={
@@ -1111,10 +1113,6 @@ export const MobileApplication: React.FC =
                     }
                 />
 
-                {/* ---------------------------------------------------------------- */}
-                {/* SETTINGS                                                         */}
-                {/* ---------------------------------------------------------------- */}
-
                 <SettingsModal
                     visible={
                         settingsOpen
@@ -1138,6 +1136,14 @@ export const MobileApplication: React.FC =
                             value,
                         )
                     }
+                    onResetMarketDefaults={async () => {
+                        await resetMarketDefaults();
+
+                        setDraftRates({});
+
+                        // Close the settings modal after resetting defaults
+                        setSettingsOpen(false);
+                    }}
                     onClose={() =>
                         setSettingsOpen(
                             false,

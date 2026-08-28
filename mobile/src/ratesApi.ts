@@ -1,8 +1,4 @@
-import {
-    CryptoCatalogItem,
-    FetchedMap,
-    Tenor,
-} from './types';
+import {CryptoCatalogItem, FetchedMap, Tenor,} from './types';
 
 const TENOR_DAYS: Record<
     Tenor,
@@ -772,17 +768,34 @@ const METAL_TICKERS: Record<
     string,
     string
 > = {
-    XAU: 'GC=F',
-    XAG: 'SI=F',
-    XPT: 'PL=F',
-    XPD: 'PA=F',
-    XCU: 'HG=F',
-    XAL: 'ALI=F',
-    XNI: 'NI=F',
-    XZN: 'ZNC=F',
-    XPB: 'LEAD=F',
+    XAU: 'GC=F',   // Gold - USD / troy oz
+    XAG: 'SI=F',   // Silver - USD / troy oz
+    XPT: 'PL=F',   // Platinum - USD / troy oz
+    XPD: 'PA=F',   // Palladium - USD / troy oz
+
+    XCU: 'HG=F',   // Copper - USD / lb
+
+    XAL: 'AL=F',   // Aluminium - USD / metric tonne
+    XNI: 'NI=F',   // Nickel - USD / metric tonne
+    XZN: 'ZNC=F',  // Zinc - USD / metric tonne
+    XPB: 'LED=F',  // Lead - USD / metric tonne
 };
 
+/*
+ * Yahoo prices for the following metals are quoted
+ * per metric tonne.
+ *
+ * The application displays them per pound.
+ */
+const POUNDS_PER_METRIC_TONNE =
+    2204.62262185;
+
+/*
+ * The application does not currently have a reliable
+ * live Yahoo ticker for Rhodium.
+ *
+ * Do NOT invent a market price for it.
+ */
 const METAL_UNITS: Record<
     string,
     {
@@ -810,11 +823,6 @@ const METAL_UNITS: Record<
         factor: 1,
     },
 
-    XRH_1OZ: {
-        base: 'XRH',
-        factor: 1,
-    },
-
     XCU_1LB: {
         base: 'XCU',
         factor: 1,
@@ -822,32 +830,31 @@ const METAL_UNITS: Record<
 
     XAL_1LB: {
         base: 'XAL',
-        factor: 1,
+        factor:
+            1 /
+            POUNDS_PER_METRIC_TONNE,
     },
 
     XNI_1LB: {
         base: 'XNI',
-        factor: 1,
+        factor:
+            1 /
+            POUNDS_PER_METRIC_TONNE,
     },
 
     XZN_1LB: {
         base: 'XZN',
-        factor: 1,
+        factor:
+            1 /
+            POUNDS_PER_METRIC_TONNE,
     },
 
     XPB_1LB: {
         base: 'XPB',
-        factor: 1,
+        factor:
+            1 /
+            POUNDS_PER_METRIC_TONNE,
     },
-};
-
-const METAL_FALLBACKS:
-    Record<string, number> = {
-    XRH: 4500,
-    XAL: 1.1,
-    XNI: 7.5,
-    XZN: 1.2,
-    XPB: 0.95,
 };
 
 async function fetchYahooSeries(
@@ -864,9 +871,7 @@ async function fetchYahooSeries(
                 )}?interval=1d&range=1y`,
             );
 
-        if (
-            !response.ok
-        ) {
+        if (!response.ok) {
             return null;
         }
 
@@ -874,8 +879,7 @@ async function fetchYahooSeries(
             await response.json();
 
         const chart =
-            json?.chart
-                ?.result?.[0];
+            json?.chart?.result?.[0];
 
         const closes =
             chart
@@ -887,21 +891,26 @@ async function fetchYahooSeries(
                         value:
                             number | null,
                     ) =>
-                        value != null,
-                ) ||
-            [];
+                        typeof value ===
+                        'number' &&
+                        Number.isFinite(
+                            value,
+                        ),
+                ) || [];
 
         const current =
             chart?.meta
                 ?.regularMarketPrice ??
             closes[
-            closes.length -
-            1
+            closes.length - 1
                 ];
 
         if (
             typeof current !==
             'number' ||
+            !Number.isFinite(
+                current,
+            ) ||
             !closes.length
         ) {
             return null;
@@ -922,6 +931,10 @@ export async function fetchMetalsData(
     const result:
         FetchedMap = {};
 
+    /*
+     * First obtain the actual Yahoo market
+     * price for each base metal.
+     */
     const baseResults:
         Record<
             string,
@@ -946,9 +959,7 @@ export async function fetchMetalsData(
                         ticker,
                     );
 
-                if (
-                    !series
-                ) {
+                if (!series) {
                     return;
                 }
 
@@ -971,6 +982,15 @@ export async function fetchMetalsData(
                         ] ??
                     series.current;
 
+                if (
+                    !Number.isFinite(
+                        reference,
+                    ) ||
+                    reference <= 0
+                ) {
+                    return;
+                }
+
                 baseResults[
                     base
                     ] = {
@@ -984,29 +1004,10 @@ export async function fetchMetalsData(
         ),
     );
 
-    Object.entries(
-        METAL_FALLBACKS,
-    ).forEach(
-        ([
-             base,
-             fallback,
-         ]) => {
-            if (
-                !baseResults[
-                    base
-                    ]
-            ) {
-                baseResults[
-                    base
-                    ] = {
-                    rate: fallback,
-                    referenceRate:
-                    fallback,
-                };
-            }
-        },
-    );
-
+    /*
+     * Convert every Yahoo base quote into
+     * the application's displayed unit.
+     */
     Object.entries(
         METAL_UNITS,
     ).forEach(
@@ -1020,6 +1021,11 @@ export async function fetchMetalsData(
                     ];
 
             if (!base) {
+                /*
+                 * No live market value.
+                 *
+                 * Do NOT manufacture a value.
+                 */
                 return;
             }
 
@@ -1030,6 +1036,19 @@ export async function fetchMetalsData(
             const reference =
                 base.referenceRate *
                 mapping.factor;
+
+            if (
+                !Number.isFinite(
+                    rate,
+                ) ||
+                !Number.isFinite(
+                    reference,
+                ) ||
+                rate <= 0 ||
+                reference <= 0
+            ) {
+                return;
+            }
 
             result[symbol] = {
                 rate: Number(

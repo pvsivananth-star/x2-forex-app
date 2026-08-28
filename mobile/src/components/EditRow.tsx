@@ -1,19 +1,10 @@
 import React from 'react';
 
-import {
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import {StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
 
-import {
-    MarketAsset,
-} from '../types';
+import {MarketAsset,} from '../types';
 
-import {
-    AppColors,
-} from '../theme';
+import {AppColors,} from '../theme';
 
 interface EditRowProps {
     asset: MarketAsset;

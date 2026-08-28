@@ -3,7 +3,7 @@ export interface AppColors {
     surface: string;
     surfaceElevated: string;
     border: string;
-
+    
     text: string;
     muted: string;
     dim: string;

@@ -1,6 +1,4 @@
-import {
-    MarketAsset,
-} from './types';
+import {MarketAsset,} from './types';
 
 export const TENOR_OPTIONS = [
     '1D',
@@ -371,11 +369,12 @@ export const METAL_CATALOG: MarketAsset[] = [
     },
 ];
 
-export const DEFAULT_METALS =
-    METAL_CATALOG.map(
-        (asset) =>
-            asset.symbol,
-    );
+export const DEFAULT_METALS = [
+    'USD',
+    ...METAL_CATALOG.map(
+        (asset) => asset.symbol,
+    ),
+];
 
 export const ALL_STATIC_CATALOG = [
     ...FX_CATALOG,
