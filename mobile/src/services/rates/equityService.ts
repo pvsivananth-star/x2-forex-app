@@ -1,5 +1,5 @@
-import {EQUITY_ORDER} from '../../catalogs';
-import { MarketAsset } from '../../models';
+import {EQUITY_ORDER} from '../../catalogs/equities';
+import {MarketAsset} from '../../models';
 import {MarketResult} from './types';
 
 const EQUITY_API_URL =
@@ -98,7 +98,7 @@ async function fetchIndex(
             symbol,
             name: catalog.name,
             rate: price,
-            referenceRate: price,
+            referenceRate: previousClose,
             changePct,
             category: 'equity',
         } as MarketAsset;
