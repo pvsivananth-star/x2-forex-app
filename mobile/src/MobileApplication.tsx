@@ -570,26 +570,28 @@ export const MobileApplication: React.FC =
                                 styles.headerActions
                             }
                         >
+                            {/* Edit button: hidden on Equity, shown for other market tabs */}
                             {activeTab !== 'portfolio' && activeTab !== 'equity' && !isEditMode && (
-                                    <>
-                                        <TouchableOpacity
-                                            onPress={startEditing}
-                                            style={styles.headerButton}
-                                            accessibilityLabel="Edit watchlist"
-                                        >
-                                            <Text style={[styles.headerButtonText, {color: colors.text}]}>✎</Text>
-                                        </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={startEditing}
+                                    style={styles.headerButton}
+                                    accessibilityLabel="Edit watchlist"
+                                >
+                                    <Text style={[styles.headerButtonText, {color: colors.text}]}>✎</Text>
+                                </TouchableOpacity>
+                            )}
 
-                                        <RefreshTimer
-                                            countdown={countdown}
-                                            totalSeconds={REFRESH_INTERVAL_SECONDS}
-                                            color={colors.accent}
-                                            backgroundColor={colors.border}
-                                            disabled={isLoading}
-                                            onPress={() => void forceRefresh()}
-                                        />
-                                    </>
-                                )}
+                            {/* Refresh should be available on all market tabs except portfolio */}
+                            {activeTab !== 'portfolio' && !isEditMode && (
+                                <RefreshTimer
+                                    countdown={countdown}
+                                    totalSeconds={REFRESH_INTERVAL_SECONDS}
+                                    color={colors.accent}
+                                    backgroundColor={colors.border}
+                                    disabled={isLoading}
+                                    onPress={() => void forceRefresh()}
+                                />
+                            )}
 
                             {isEditMode && (
                                 <Text
