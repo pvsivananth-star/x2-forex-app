@@ -6,16 +6,16 @@ export interface CalculatedRate {
 }
 
 /**
- * All FX rates are stored as USD per 1 unit of currency.
+ * All FX rates are stored as currency units per 1 USD.
  *
  * Example:
  * USD = 1
- * EUR = 1.16
- * JPY = 0.00645
+ * EUR = 0.86
+ * JPY = 155
  *
  * A user edit is an amount in the selected currency. The engine first
  * converts that amount to USD, then converts the USD amount into every
- * other currency using USD-per-unit rates.
+ * other currency using currency-per-USD rates.
  *
  * The edited row is returned verbatim and is never recalculated.
  */
@@ -24,13 +24,13 @@ export function calculateFromAnchor(
     anchorSymbol: string,
     anchorValue: number,
 ): CalculatedRate[] {
-    const anchorUsdPerUnit = base[anchorSymbol];
+    const anchorPerUsd = base[anchorSymbol];
 
     if (
         !Number.isFinite(anchorValue) ||
         anchorValue <= 0 ||
-        !Number.isFinite(anchorUsdPerUnit) ||
-        anchorUsdPerUnit <= 0
+        !Number.isFinite(anchorPerUsd) ||
+        anchorPerUsd <= 0
     ) {
         return Object.entries(base).map(
             ([symbol, value]) => ({
@@ -43,17 +43,17 @@ export function calculateFromAnchor(
     const usdAmount =
         anchorSymbol === 'USD'
             ? anchorValue
-            : anchorValue * anchorUsdPerUnit;
+            : anchorValue / anchorPerUsd;
 
     return Object.entries(base).map(
-        ([symbol, usdPerUnit]) => ({
+        ([symbol, perUsd]) => ({
             symbol,
             value:
                 symbol === anchorSymbol
                     ? anchorValue
                     : symbol === 'USD'
                         ? usdAmount
-                        : usdAmount / usdPerUnit,
+                        : usdAmount * perUsd,
         }),
     );
 }
@@ -80,15 +80,15 @@ export function convert(
     toSymbol: string,
     base: RateBase,
 ): number {
-    const fromUsdPerUnit = base[fromSymbol];
-    const toUsdPerUnit = base[toSymbol];
+    const fromPerUsd = base[fromSymbol];
+    const toPerUsd = base[toSymbol];
 
     if (
         !Number.isFinite(amount) ||
-        !Number.isFinite(fromUsdPerUnit) ||
-        !Number.isFinite(toUsdPerUnit) ||
-        fromUsdPerUnit <= 0 ||
-        toUsdPerUnit <= 0
+        !Number.isFinite(fromPerUsd) ||
+        !Number.isFinite(toPerUsd) ||
+        fromPerUsd <= 0 ||
+        toPerUsd <= 0
     ) {
         return 0;
     }
@@ -96,9 +96,9 @@ export function convert(
     const usdAmount =
         fromSymbol === 'USD'
             ? amount
-            : amount * fromUsdPerUnit;
+            : amount / fromPerUsd;
 
     return toSymbol === 'USD'
         ? usdAmount
-        : usdAmount / toUsdPerUnit;
+        : usdAmount * toPerUsd;
 }
