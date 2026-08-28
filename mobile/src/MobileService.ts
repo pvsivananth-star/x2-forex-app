@@ -19,13 +19,16 @@ import {
 
 import {
     fetchCryptoCatalog,
-    fetchCryptoData,
-    fetchEquityData,
-    fetchFxData,
-    fetchMetalsData,
 } from './ratesApi';
 
-import { DecimalPlaces, MarketAsset, PersistedSettings, TabCategory, Tenor, ThemePreference } from './models';
+import {
+    fetchCryptoForMobileService,
+    fetchEquityForMobileService,
+    fetchFxForMobileService,
+    fetchMetalsForMobileService,
+} from './services/rates/mobileServiceAdapters';
+
+import {DecimalPlaces, MarketAsset, PersistedSettings, TabCategory, Tenor, ThemePreference} from './models';
 
 export type {
     DecimalPlaces,
@@ -1766,17 +1769,18 @@ export const useMobileStore =
                         crypto,
                         metals,
                     ] = await Promise.all([
-                        fetchFxData(
+                        fetchFxForMobileService(
                             state.tenorFx,
                         ),
-                        fetchEquityData(),
 
-                        fetchCryptoData(
+                        fetchEquityForMobileService(),
+
+                        fetchCryptoForMobileService(
                             state.tenorCrypto,
                             cryptoIds,
                         ),
 
-                        fetchMetalsData(
+                        fetchMetalsForMobileService(
                             state.tenorMetals,
                         ),
                     ]);
