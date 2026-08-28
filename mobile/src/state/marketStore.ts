@@ -1,10 +1,15 @@
 import {useSyncExternalStore} from 'react';
 import {DEFAULT_FX, FX_CATALOG} from '../catalogs/currencies';
-import {METAL_CATALOG} from '../catalogs';
+import {CRYPTO_DEFAULT_CATALOG, DEFAULT_CRYPTO} from '../catalogs/crypto';
+import {DEFAULT_METALS, METAL_CATALOG} from '../catalogs/metals';
 import {EQUITY_ORDER} from '../catalogs/equities';
 import {calculateFromAnchor, normalizeBaseRates, RateBase} from '../utils/rateEngine';
-import { MarketAsset } from '../models';
-import {TabCategory} from '../models/settings';
+import {MarketAsset} from '../models';
+import {TabCategory, Tenor} from '../models/settings';
+import {fetchFxRates} from '../services/rates/fxService';
+import {fetchCryptoRates} from '../services/rates/cryptoService';
+import {fetchMetalsRates} from '../services/rates/metalsService';
+import {fetchEquityRates} from '../services/rates/equityService';
 
 type State = {
     activeTab: TabCategory;
@@ -12,15 +17,48 @@ type State = {
     baseRates: RateBase;
     editedSymbol: string | null;
     editedValues: Record<string, number>;
+    tenorFx: Tenor;
+    tenorCrypto: Tenor;
+    tenorMetals: Tenor;
+    isLoading: boolean;
+    isOnline: boolean;
+    lastSynced: number;
 };
 
 const initialBase: RateBase = normalizeBaseRates(
-    Object.fromEntries(FX_CATALOG.map(asset => [asset.symbol, asset.rate])),
+    Object.fromEntries(
+        FX_CATALOG.map(asset => [asset.symbol, asset.rate]),
+    ),
 );
 
+const initialCryptoAssets: MarketAsset[] = [
+    {
+        symbol: 'USD',
+        name: 'US Dollar',
+        rate: 1,
+        referenceRate: 1,
+        changePct: 0,
+        category: 'crypto',
+    },
+    ...CRYPTO_DEFAULT_CATALOG,
+];
+
+const initialMetalAssets: MarketAsset[] = [
+    {
+        symbol: 'USD',
+        name: 'US Dollar',
+        rate: 1,
+        referenceRate: 1,
+        changePct: 0,
+        category: 'metals',
+    },
+    ...METAL_CATALOG,
+];
+
 const initialAssets: Record<string, MarketAsset> = Object.fromEntries([
-    ...FX_CATALOG.map(asset => [asset.symbol, asset] as const),
-    ...METAL_CATALOG.map(asset => [asset.symbol, asset] as const),
+    ...FX_CATALOG.map(asset => [asset.symbol, {...asset}] as const),
+    ...initialCryptoAssets.map(asset => [asset.symbol, {...asset}] as const),
+    ...initialMetalAssets.map(asset => [asset.symbol, {...asset}] as const),
     ...EQUITY_ORDER.map(item => [
         item.symbol,
         {
@@ -30,6 +68,7 @@ const initialAssets: Record<string, MarketAsset> = Object.fromEntries([
             referenceRate: 0,
             changePct: 0,
             category: 'equity' as const,
+            country: item.country,
         },
     ] as const),
 ]);
@@ -40,9 +79,16 @@ let state: State = {
     baseRates: initialBase,
     editedSymbol: null,
     editedValues: {},
+    tenorFx: '1D',
+    tenorCrypto: '1W',
+    tenorMetals: '1M',
+    isLoading: false,
+    isOnline: true,
+    lastSynced: 0,
 };
 
 const listeners = new Set<() => void>();
+let refreshPromise: Promise<void> | null = null;
 
 function emit() {
     listeners.forEach(listener => listener());
@@ -53,6 +99,76 @@ function setState(next: Partial<State>) {
     emit();
 }
 
+async function refreshRates(): Promise<void> {
+    if (refreshPromise) {
+        return refreshPromise;
+    }
+
+    refreshPromise = (async () => {
+        setState({isLoading: true});
+
+        try {
+            const [fx, crypto, metals, equity] = await Promise.all([
+                fetchFxRates(state.tenorFx),
+                fetchCryptoRates(
+                    state.tenorCrypto,
+                    DEFAULT_CRYPTO.filter(symbol => symbol !== 'USD'),
+                ),
+                fetchMetalsRates(state.tenorMetals),
+                fetchEquityRates(),
+            ]);
+
+            const nextAssets: Record<string, MarketAsset> = {
+                ...state.assets,
+            };
+
+            const applyResult = (data: MarketAsset[]) => {
+                data.forEach(asset => {
+                    nextAssets[asset.symbol] = {
+                        ...nextAssets[asset.symbol],
+                        ...asset,
+                    };
+                });
+            };
+
+            applyResult(fx.data);
+            applyResult(crypto.data);
+            applyResult(metals.data);
+            applyResult(equity.data);
+
+            const nextBaseRates = normalizeBaseRates(
+                Object.fromEntries(
+                    fx.data.map(asset => [
+                        asset.symbol,
+                        asset.rate,
+                    ]),
+                ),
+            );
+
+            setState({
+                assets: nextAssets,
+                baseRates: nextBaseRates,
+                isLoading: false,
+                isOnline:
+                    !fx.isOffline ||
+                    !crypto.isOffline ||
+                    !metals.isOffline ||
+                    !equity.isOffline,
+                lastSynced: Date.now(),
+            });
+        } catch {
+            setState({
+                isLoading: false,
+                isOnline: false,
+            });
+        }
+    })().finally(() => {
+        refreshPromise = null;
+    });
+
+    return refreshPromise;
+}
+
 export const marketStore = {
     get: () => state,
     subscribe: (listener: () => void) => {
@@ -60,7 +176,20 @@ export const marketStore = {
         return () => listeners.delete(listener);
     },
 
-    setActiveTab: (activeTab: TabCategory) => setState({activeTab}),
+    setActiveTab: (activeTab: TabCategory) => {
+        setState({activeTab});
+    },
+
+    setTenors: (
+        tenorFx: Tenor,
+        tenorCrypto: Tenor,
+        tenorMetals: Tenor,
+    ) => {
+        setState({tenorFx, tenorCrypto, tenorMetals});
+        void refreshRates();
+    },
+
+    refresh: refreshRates,
 
     setBaseRates: (rates: RateBase) => {
         const baseRates = normalizeBaseRates(rates);
@@ -72,61 +201,145 @@ export const marketStore = {
     },
 
     setEditedRate: (symbol: string, value: number) => {
-        if (symbol === 'USD' || !Number.isFinite(value) || value <= 0) {
-            if (symbol === 'USD' && Number.isFinite(value) && value > 0) {
-                const calculated = calculateFromAnchor(state.baseRates, 'USD', value);
-                setState({
-                    editedSymbol: 'USD',
-                    editedValues: Object.fromEntries(calculated.map(x => [x.symbol, x.value])),
-                });
-            }
+        if (
+            !Number.isFinite(value) ||
+            value <= 0
+        ) {
             return;
         }
 
-        const calculated = calculateFromAnchor(state.baseRates, symbol, value);
+        const calculated = calculateFromAnchor(
+            state.baseRates,
+            symbol,
+            value,
+        );
+
         setState({
             editedSymbol: symbol,
-            editedValues: Object.fromEntries(calculated.map(x => [x.symbol, x.value])),
+            editedValues: Object.fromEntries(
+                calculated.map(x => [
+                    x.symbol,
+                    x.value,
+                ]),
+            ),
         });
     },
 
-    clearEdit: () => setState({editedSymbol: null, editedValues: {}}),
+    clearEdit: () =>
+        setState({
+            editedSymbol: null,
+            editedValues: {},
+        }),
 
-    visibleRates: (category: 'fx' | 'crypto' | 'metals' | 'equity') => {
-        const symbols = category === 'fx' ? DEFAULT_FX : Object.keys(state.assets).filter(
-            symbol => state.assets[symbol]?.category === category,
-        );
+    visibleRates: (
+        category:
+            | 'fx'
+            | 'crypto'
+            | 'metals'
+            | 'equity',
+    ) => {
+        const symbols =
+            category === 'fx'
+                ? DEFAULT_FX
+                : category === 'crypto'
+                    ? [
+                        'USD',
+                        ...DEFAULT_CRYPTO.filter(
+                            symbol => symbol !== 'USD',
+                        ),
+                    ]
+                    : category === 'metals'
+                        ? [
+                            'USD',
+                            ...DEFAULT_METALS.filter(
+                                symbol => symbol !== 'USD',
+                            ),
+                        ]
+                        : EQUITY_ORDER.map(
+                            item => item.symbol,
+                        );
 
         return symbols
             .map(symbol => {
-                const asset = state.assets[symbol];
-                if (!asset) return null;
-                const value = state.editedValues[symbol] ?? asset.rate;
-                // Compatibility: include legacy `value` property used across older components
-                return {...asset, rate: value, value};
+                const asset =
+                    state.assets[symbol];
+
+                if (!asset) {
+                    return null;
+                }
+
+                const value =
+                    state.editedValues[symbol] ??
+                    asset.rate;
+
+                return {
+                    ...asset,
+                    rate: value,
+                    value,
+                };
             })
             .filter(Boolean) as MarketAsset[];
     },
 };
 
-export function useMobileStore<T>(selector: (s: State & typeof marketStore) => T): T {
+export function useMobileStore<T>(
+    selector: (
+        s: State & typeof marketStore,
+    ) => T,
+): T {
+    const snapshot =
+        useSyncExternalStore(
+            marketStore.subscribe,
+            marketStore.get,
+            marketStore.get,
+        );
+
     return selector(
-        Object.assign(state, {
-            get: marketStore.get,
-            subscribe: marketStore.subscribe,
-            setActiveTab: marketStore.setActiveTab,
-            setBaseRates: marketStore.setBaseRates,
-            setEditedRate: marketStore.setEditedRate,
-            clearEdit: marketStore.clearEdit,
-            visibleRates: marketStore.visibleRates,
-        }) as State & typeof marketStore,
+        Object.assign(
+            {},
+            snapshot,
+            {
+                get: marketStore.get,
+                subscribe: marketStore.subscribe,
+                setActiveTab:
+                    marketStore.setActiveTab,
+                setTenors:
+                    marketStore.setTenors,
+                refresh:
+                    marketStore.refresh,
+                setBaseRates:
+                    marketStore.setBaseRates,
+                setEditedRate:
+                    marketStore.setEditedRate,
+                clearEdit:
+                    marketStore.clearEdit,
+                visibleRates:
+                    marketStore.visibleRates,
+            },
+        ) as State & typeof marketStore,
     );
 }
 
-export function useMarketStore<T>(selector: (s: State) => T): T {
-    return selector(state);
+export function useMarketStore<T>(
+    selector: (s: State) => T,
+): T {
+    const snapshot =
+        useSyncExternalStore(
+            marketStore.subscribe,
+            marketStore.get,
+            marketStore.get,
+        );
+
+    return selector(snapshot);
 }
 
 export function useStoreSnapshot(): State {
-    return useSyncExternalStore(marketStore.subscribe, marketStore.get, marketStore.get);
+    return useSyncExternalStore(
+        marketStore.subscribe,
+        marketStore.get,
+        marketStore.get,
+    );
 }
+
+// Load current rates as soon as the store module is evaluated.
+void refreshRates();
