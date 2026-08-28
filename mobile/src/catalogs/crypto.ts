@@ -1,4 +1,4 @@
-import { MarketAsset } from '../models/market';
+import { MarketAsset } from '../models';
 
 export const CRYPTO_DEFAULT_CATALOG: MarketAsset[] = [
   ['bitcoin','BTC','Bitcoin'], ['ethereum','ETH','Ethereum'], ['tether','USDT','Tether'],

@@ -1,6 +1,6 @@
 import React from 'react';
 import {Pressable, Text, View} from 'react-native';
-import {TabCategory} from '../../models/market';
+import { TabCategory } from '../../models';
 import {styles} from './BottomTabs.styles';
 
 const TABS: { key: TabCategory; icon: string }[] = [

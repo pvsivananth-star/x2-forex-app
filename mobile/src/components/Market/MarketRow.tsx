@@ -1,7 +1,7 @@
 import React from 'react';
 import {Text, View} from 'react-native';
 import {styles} from './MarketRow.styles';
-import {MarketRate} from '../../models/market';
+import { MarketRate } from '../../models';
 import {RateInput} from './RateInput';
 
 export function MarketRow({item, editable = false, active = false, onChange, onActivate, onDeactivate}: {

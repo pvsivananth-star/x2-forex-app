@@ -1,4 +1,4 @@
-import {MarketAsset} from '../../models/market';
+import { MarketAsset } from '../../models';
 
 export interface MarketResult {
     data: MarketAsset[];

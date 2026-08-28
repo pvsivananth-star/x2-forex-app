@@ -1,4 +1,4 @@
-import { MarketAsset } from '../models/market';
+import { MarketAsset } from '../models';
 
 export const METAL_CATALOG: MarketAsset[] = [
   ['XAU_1OZ','Gold · 1 Troy Oz',2350], ['XAG_1OZ','Silver · 1 Troy Oz',28],

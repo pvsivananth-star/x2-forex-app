@@ -3,7 +3,7 @@ import {DEFAULT_FX, FX_CATALOG} from '../catalogs/currencies';
 import {METAL_CATALOG} from '../catalogs';
 import {EQUITY_ORDER} from '../catalogs/equities';
 import {calculateFromAnchor, normalizeBaseRates, RateBase} from '../utils/rateEngine';
-import {MarketAsset} from '../models/market';
+import { MarketAsset } from '../models';
 import {TabCategory} from '../models/settings';
 
 type State = {

@@ -1,4 +1,4 @@
-import {MarketAsset,} from './types';
+import { MarketAsset } from './models';
 
 export const TENOR_OPTIONS = [
     '1D',

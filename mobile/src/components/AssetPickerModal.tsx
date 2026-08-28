@@ -3,7 +3,7 @@ import React, {useMemo,} from 'react';
 import {FlatList, Modal, Text, TextInput, TouchableOpacity, View,} from 'react-native';
 import {styles, themed} from './AssetPickerModal.styles';
 
-import {MarketAsset,} from '../types';
+import { MarketAsset } from '../models';
 
 import {AppColors,} from '../theme';
 

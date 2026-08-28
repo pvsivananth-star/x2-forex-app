@@ -25,7 +25,7 @@ import {
     fetchMetalsData,
 } from './ratesApi';
 
-import {DecimalPlaces, MarketAsset, PersistedSettings, TabCategory, Tenor, ThemePreference,} from './types';
+import { DecimalPlaces, MarketAsset, PersistedSettings, TabCategory, Tenor, ThemePreference } from './models';
 
 export type {
     DecimalPlaces,

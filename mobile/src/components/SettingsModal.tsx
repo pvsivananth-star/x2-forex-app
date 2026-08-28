@@ -11,7 +11,7 @@ import {styles, themed} from './SettingsModal.styles';
 import {
     DecimalPlaces,
     ThemePreference,
-} from '../types';
+} from '../models';
 
 import {
     AppColors,

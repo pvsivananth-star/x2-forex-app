@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {FlatList} from 'react-native';
-import {MarketRate} from '../../models/market';
+import { MarketRate } from '../../models';
 import {MarketRow} from './MarketRow';
 
 export function MarketList({data, editable = false, onRateChange, activeSymbol}: {

@@ -13,7 +13,7 @@ import {
 
 import {REFRESH_INTERVAL_SECONDS, TENOR_OPTIONS, useMobileStore,} from './MobileService';
 
-import {MarketAsset, TabCategory,} from './types';
+import { MarketAsset, TabCategory } from './models';
 
 import {CRYPTO_DEFAULT_CATALOG, FX_CATALOG, METAL_CATALOG, DEFAULT_EQUITY} from './catalogs';
 

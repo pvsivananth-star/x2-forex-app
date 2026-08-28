@@ -1,4 +1,4 @@
-import {CryptoCatalogItem, FetchedMap, Tenor,} from './types';
+import { CryptoCatalogItem, FetchedMap, Tenor } from './models';
 
 const TENOR_DAYS: Record<
     Tenor,

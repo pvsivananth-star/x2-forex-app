@@ -1,4 +1,4 @@
-import { MarketAsset } from '../models/market';
+import { MarketAsset } from '../models';
 
 export const FX_CATALOG: MarketAsset[] = [
   ['USD','US Dollar',1], ['EUR','Euro',1.08], ['JPY','Japanese Yen',155],

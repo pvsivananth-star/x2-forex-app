@@ -1,4 +1,4 @@
-import {MarketRate} from '../models/market';
+import { MarketRate } from '../models';
 
 
 /**

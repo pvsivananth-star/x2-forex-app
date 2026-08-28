@@ -1,5 +1,5 @@
 import {EQUITY_ORDER} from '../../catalogs';
-import {MarketAsset} from '../../models/market';
+import { MarketAsset } from '../../models';
 import {MarketResult} from './types';
 
 const EQUITY_API_URL =

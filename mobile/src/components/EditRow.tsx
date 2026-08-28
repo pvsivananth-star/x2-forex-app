@@ -3,7 +3,7 @@ import React from 'react';
 import {Text, TouchableOpacity, View,} from 'react-native';
 import {styles, rowContainer, arrowColor, removeButton, removeText} from './EditRow.styles';
 
-import {MarketAsset,} from '../types';
+import { MarketAsset } from '../models';
 
 import {AppColors,} from '../theme';
 

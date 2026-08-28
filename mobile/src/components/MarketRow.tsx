@@ -3,7 +3,7 @@ import React, {useEffect, useRef, useState,} from 'react';
 import {Text, TextInput, View,} from 'react-native';
 import {makeRowStyles} from './MarketRow.styles';
 
-import {MarketAsset,} from '../types';
+import { MarketAsset } from '../models';
 
 import {AppColors,} from '../theme';
 
