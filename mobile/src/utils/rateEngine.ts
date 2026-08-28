@@ -6,13 +6,17 @@ export interface CalculatedRate {
 }
 
 /**
- * All market rates are stored in one immutable USD-base representation.
+ * All FX rates are stored as USD per 1 unit of currency.
  *
- * For FX, the base value is units of the currency per 1 USD.
- * Example: USD=1, EUR=.92, JPY=147.
+ * Example:
+ * USD = 1
+ * EUR = 1.16
+ * JPY = 0.00645
  *
  * A user edit is an amount in the selected currency. The engine first
- * converts that amount to USD, then converts USD to every other currency.
+ * converts that amount to USD, then converts the USD amount into every
+ * other currency using USD-per-unit rates.
+ *
  * The edited row is returned verbatim and is never recalculated.
  */
 export function calculateFromAnchor(
@@ -20,36 +24,51 @@ export function calculateFromAnchor(
     anchorSymbol: string,
     anchorValue: number,
 ): CalculatedRate[] {
-    const anchorPerUsd = base[anchorSymbol];
+    const anchorUsdPerUnit = base[anchorSymbol];
 
     if (
         !Number.isFinite(anchorValue) ||
         anchorValue <= 0 ||
-        !Number.isFinite(anchorPerUsd) ||
-        anchorPerUsd <= 0
+        !Number.isFinite(anchorUsdPerUnit) ||
+        anchorUsdPerUnit <= 0
     ) {
-        return Object.entries(base).map(([symbol, value]) => ({symbol, value}));
+        return Object.entries(base).map(
+            ([symbol, value]) => ({
+                symbol,
+                value,
+            }),
+        );
     }
 
-    const usdAmount = anchorSymbol === 'USD'
-        ? anchorValue
-        : anchorValue / anchorPerUsd;
-
-    return Object.entries(base).map(([symbol, perUsd]) => ({
-        symbol,
-        value: symbol === anchorSymbol
+    const usdAmount =
+        anchorSymbol === 'USD'
             ? anchorValue
-            : usdAmount * perUsd,
-    }));
+            : anchorValue * anchorUsdPerUnit;
+
+    return Object.entries(base).map(
+        ([symbol, usdPerUnit]) => ({
+            symbol,
+            value:
+                symbol === anchorSymbol
+                    ? anchorValue
+                    : symbol === 'USD'
+                        ? usdAmount
+                        : usdAmount / usdPerUnit,
+        }),
+    );
 }
 
-export function normalizeBaseRates(rates: RateBase): RateBase {
+export function normalizeBaseRates(
+    rates: RateBase,
+): RateBase {
     return {
         USD: 1,
         ...Object.fromEntries(
             Object.entries(rates).filter(
                 ([symbol, value]) =>
-                    symbol !== 'USD' && Number.isFinite(value) && value > 0,
+                    symbol !== 'USD' &&
+                    Number.isFinite(value) &&
+                    value > 0,
             ),
         ),
     };
@@ -61,19 +80,25 @@ export function convert(
     toSymbol: string,
     base: RateBase,
 ): number {
-    const from = base[fromSymbol];
-    const to = base[toSymbol];
+    const fromUsdPerUnit = base[fromSymbol];
+    const toUsdPerUnit = base[toSymbol];
 
     if (
         !Number.isFinite(amount) ||
-        !Number.isFinite(from) ||
-        !Number.isFinite(to) ||
-        from <= 0 ||
-        to <= 0
+        !Number.isFinite(fromUsdPerUnit) ||
+        !Number.isFinite(toUsdPerUnit) ||
+        fromUsdPerUnit <= 0 ||
+        toUsdPerUnit <= 0
     ) {
         return 0;
     }
 
-    const usdAmount = fromSymbol === 'USD' ? amount : amount / from;
-    return toSymbol === 'USD' ? usdAmount : usdAmount * to;
+    const usdAmount =
+        fromSymbol === 'USD'
+            ? amount
+            : amount * fromUsdPerUnit;
+
+    return toSymbol === 'USD'
+        ? usdAmount
+        : usdAmount / toUsdPerUnit;
 }
