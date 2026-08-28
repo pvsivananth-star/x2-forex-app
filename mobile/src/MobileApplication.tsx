@@ -23,7 +23,7 @@ import {
 
 import {DARK_COLORS, LIGHT_COLORS,} from './theme';
 
-import {BottomTabs,} from './components/BottomTabs';
+import { BottomTabs } from './components/Navigation/BottomTabs';
 
 import {RefreshTimer,} from './components/RefreshTimer';
 
