@@ -2205,16 +2205,7 @@ export const useMobileStore =
                                 STORAGE_KEY,
                             );
 
-                        if (!saved) {
-                            const saved =
-                                JSON.parse(
-                                    raw,
-                                ) as Partial<
-                                    PersistedSettings & {
-                                    marketState?: PersistedMarketState;
-                                }
-                                >;
-
+                        if (saved) {
                             const fx =
                                 saved.watchlistFx?.length
                                     ? saved.watchlistFx
