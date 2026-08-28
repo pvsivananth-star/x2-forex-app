@@ -26,6 +26,20 @@ export const settingsStore = {
         emit();
     },
 
+    setTenors: (
+        tenorFx: Settings['tenorFx'],
+        tenorCrypto: Settings['tenorCrypto'],
+        tenorMetals: Settings['tenorMetals'],
+    ) => {
+        state = {
+            ...state,
+            tenorFx,
+            tenorCrypto,
+            tenorMetals,
+        };
+        emit();
+    },
+
     subscribe: (listener: () => void) => {
         listeners.add(listener);
         return () => listeners.delete(listener);
