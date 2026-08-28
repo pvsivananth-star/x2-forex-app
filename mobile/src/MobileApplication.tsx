@@ -1,6 +1,5 @@
 import React, {useEffect, useMemo, useState,} from 'react';
 
-
 import {
     SafeAreaView,
     ScrollView,
@@ -49,7 +48,11 @@ export const MobileApplication: React.FC =
 
         const {
             activeTab,
-            tenor,
+
+            tenorFx,
+            tenorCrypto,
+            tenorMetals,
+
             decimalPlaces,
             theme,
 
@@ -89,6 +92,8 @@ export const MobileApplication: React.FC =
             forceRefresh,
             tickCountdown,
             initialize,
+
+            resetMarketDefaults,
         } =
             useMobileStore();
 
@@ -124,6 +129,13 @@ export const MobileApplication: React.FC =
         ] = useState<
             Record<string, string>
         >({});
+
+        const [
+            focusedSymbol,
+            setFocusedSymbol,
+        ] = useState<string | null>(
+            null,
+        );
 
         const darkMode =
             theme === 'dark' ||
@@ -242,6 +254,21 @@ export const MobileApplication: React.FC =
                 assets,
             ]);
 
+        /*
+         * Each market keeps its own
+         * percentage-change tenor.
+         *
+         * FX     -> tenorFx
+         * Crypto -> tenorCrypto
+         * Metals -> tenorMetals
+         */
+        const activeTenor =
+            activeTab === 'fx'
+                ? tenorFx
+                : activeTab === 'crypto'
+                    ? tenorCrypto
+                    : tenorMetals;
+
         const commitRate = (
             symbol: string,
             rawValue: string,
@@ -329,12 +356,14 @@ export const MobileApplication: React.FC =
              * USD cannot be moved.
              */
             if (
-                activeTab === 'fx' &&
                 (
-                    next[index] ===
-                    'USD' ||
-                    next[target] ===
-                    'USD'
+                    activeTab === 'fx' ||
+                    activeTab === 'crypto' ||
+                    activeTab === 'metals'
+                ) &&
+                (
+                    next[index] === 'USD' ||
+                    next[target] === 'USD'
                 )
             ) {
                 return;
@@ -418,8 +447,6 @@ export const MobileApplication: React.FC =
                 search,
             ]);
 
-        const [focusedSymbol, setFocusedSymbol] = useState<string | null>(null);
-
         return (
             <SafeAreaView
                 style={[
@@ -451,7 +478,6 @@ export const MobileApplication: React.FC =
                         {
                             backgroundColor:
                             colors.surface,
-
                             borderBottomColor:
                             colors.border,
                         },
@@ -585,6 +611,7 @@ export const MobileApplication: React.FC =
                                     EDIT
                                 </Text>
                             )}
+
                             <View
                                 accessible={true}
                                 accessibilityLabel={
@@ -713,7 +740,7 @@ export const MobileApplication: React.FC =
                                             },
                                         ]}
                                     >
-                                        % {tenor}{' '}
+                                        % {activeTenor}{' '}
                                         ▾
                                     </Text>
                                 </TouchableOpacity>
@@ -728,7 +755,6 @@ export const MobileApplication: React.FC =
                                         {
                                             backgroundColor:
                                             colors.surfaceElevated,
-
                                             borderColor:
                                             colors.border,
                                         },
@@ -748,7 +774,7 @@ export const MobileApplication: React.FC =
                                                 style={[
                                                     styles.tenorOption,
                                                     option ===
-                                                    tenor && {
+                                                    activeTenor && {
                                                         backgroundColor:
                                                         colors.accentStrong,
                                                     },
@@ -758,10 +784,9 @@ export const MobileApplication: React.FC =
                                                     style={{
                                                         color:
                                                             option ===
-                                                            tenor
+                                                            activeTenor
                                                                 ? '#FFFFFF'
                                                                 : colors.text,
-
                                                         fontWeight:
                                                             '800',
                                                     }}
@@ -794,7 +819,6 @@ export const MobileApplication: React.FC =
                                         {
                                             backgroundColor:
                                             colors.surfaceElevated,
-
                                             borderColor:
                                             colors.border,
                                         },
@@ -881,9 +905,20 @@ export const MobileApplication: React.FC =
                                             onCommit={
                                                 commitRate
                                             }
-                                            active={asset.symbol === focusedSymbol}
-                                            onActivate={() => setFocusedSymbol(asset.symbol)}
-                                            onDeactivate={() => setFocusedSymbol(null)}
+                                            active={
+                                                asset.symbol ===
+                                                focusedSymbol
+                                            }
+                                            onActivate={() =>
+                                                setFocusedSymbol(
+                                                    asset.symbol,
+                                                )
+                                            }
+                                            onDeactivate={() =>
+                                                setFocusedSymbol(
+                                                    null,
+                                                )
+                                            }
                                         />
                                     ),
                             )}
@@ -898,7 +933,6 @@ export const MobileApplication: React.FC =
                                         {
                                             borderColor:
                                             colors.accent,
-
                                             backgroundColor:
                                             colors.surfaceElevated,
                                         },
@@ -955,7 +989,6 @@ export const MobileApplication: React.FC =
                                     {
                                         backgroundColor:
                                         colors.surface,
-
                                         borderTopColor:
                                         colors.border,
                                     },
@@ -994,7 +1027,6 @@ export const MobileApplication: React.FC =
                                         {
                                             backgroundColor:
                                             colors.accentStrong,
-
                                             borderColor:
                                             colors.accentStrong,
                                         },
@@ -1033,10 +1065,6 @@ export const MobileApplication: React.FC =
                         }
                     />
                 )}
-
-                {/* ---------------------------------------------------------------- */}
-                {/* ADD ASSET                                                        */}
-                {/* ---------------------------------------------------------------- */}
 
                 <AssetPickerModal
                     visible={
@@ -1084,10 +1112,6 @@ export const MobileApplication: React.FC =
                         )
                     }
                 />
-
-                {/* ---------------------------------------------------------------- */}
-                {/* SETTINGS                                                         */}
-                {/* ---------------------------------------------------------------- */}
 
                 <SettingsModal
                     visible={

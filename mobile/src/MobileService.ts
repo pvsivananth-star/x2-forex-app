@@ -62,7 +62,9 @@ type CategoryState = {
 interface MobileServiceState {
     activeTab: TabCategory;
 
-    tenor: Tenor;
+    tenorFx: Tenor;
+    tenorCrypto: Tenor;
+    tenorMetals: Tenor;
 
     decimalPlaces: DecimalPlaces;
 
@@ -742,6 +744,20 @@ type PersistedMarketState = {
     };
 };
 
+function getCategoryTenor(
+    category: Category,
+): Tenor {
+    if (category === 'fx') {
+        return useMobileStore.getState().tenorFx;
+    }
+
+    if (category === 'crypto') {
+        return useMobileStore.getState().tenorCrypto;
+    }
+
+    return useMobileStore.getState().tenorMetals;
+}
+
 async function persistState(
     state: MobileServiceState,
 ): Promise<void> {
@@ -853,7 +869,9 @@ export const useMobileStore =
         (set, get) => ({
             activeTab: 'fx',
 
-            tenor: '1D',
+            tenorFx: '1D',
+            tenorCrypto: '1W',
+            tenorMetals: '1M',
 
             decimalPlaces: 4,
 
@@ -930,9 +948,21 @@ export const useMobileStore =
             },
 
             setTenor: tenor => {
-                set({
-                    tenor,
-                });
+                const state = get();
+
+                if (state.activeTab === 'fx') {
+                    set({
+                        tenorFx: tenor,
+                    });
+                } else if (state.activeTab === 'crypto') {
+                    set({
+                        tenorCrypto: tenor,
+                    });
+                } else if (state.activeTab === 'metals') {
+                    set({
+                        tenorMetals: tenor,
+                    });
+                }
 
                 void persistState(
                     get(),
@@ -940,8 +970,7 @@ export const useMobileStore =
                     () => undefined,
                 );
 
-                void get()
-                    .forceRefresh();
+                void get().forceRefresh();
             },
 
             setDecimalPlaces: value => {
@@ -1329,25 +1358,16 @@ export const useMobileStore =
                     return;
                 }
 
-                if (
-                    category === 'metals'
-                ) {
-                    set({
-                        editWatchlistMetals: [
-                            'USD',
-                            ...next.filter(
-                                item =>
-                                    item !== 'USD',
-                            ),
-                        ],
-                    });
+                set({
+                    editWatchlistMetals: [
+                        'USD',
+                        ...next.filter(
+                            item =>
+                                item !== 'USD',
+                        ),
+                    ],
+                });
 
-                    return;
-                }
-                // set({
-                //     editWatchlistMetals:
-                //     next,
-                // });
             },
 
             removeAssetFromWatchlist: (
@@ -1665,16 +1685,16 @@ export const useMobileStore =
                         metals,
                     ] = await Promise.all([
                         fetchFxData(
-                            state.tenor,
+                            state.tenorFx,
                         ),
 
                         fetchCryptoData(
-                            state.tenor,
+                            state.tenorCrypto,
                             cryptoIds,
                         ),
 
                         fetchMetalsData(
-                            state.tenor,
+                            state.tenorMetals,
                         ),
                     ]);
 
@@ -2106,19 +2126,32 @@ export const useMobileStore =
                                     ? saved.watchlistCrypto
                                     : DEFAULT_CRYPTO;
 
-                            const metals =
-                                saved.watchlistMetals?.length
-                                    ? saved.watchlistMetals
-                                    : DEFAULT_METALS;
+                            const metals = [
+                                'USD',
+                                ...(saved.watchlistMetals?.length
+                                        ? saved.watchlistMetals
+                                        : DEFAULT_METALS
+                                ).filter(
+                                    symbol => symbol !== 'USD',
+                                ),
+                            ];
 
                             set({
                                 activeTab:
                                     saved.activeTab ??
                                     'fx',
 
-                                tenor:
-                                    saved.tenor ??
+                                tenorFx:
+                                    saved.tenorFx ??
                                     '1D',
+
+                                tenorCrypto:
+                                    saved.tenorCrypto ??
+                                    '1W',
+
+                                tenorMetals:
+                                    saved.tenorMetals ??
+                                    '1M',
 
                                 decimalPlaces:
                                     saved.decimalPlaces ??
