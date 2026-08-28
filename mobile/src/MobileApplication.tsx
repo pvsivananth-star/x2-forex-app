@@ -571,7 +571,7 @@ export const MobileApplication: React.FC =
                             }
                         >
                             {/* Edit button: hidden on Equity, shown for other market tabs */}
-                            {activeTab === 'fx' && !isEditMode && (
+                            {activeTab !== 'portfolio' && activeTab !== 'equity' && !isEditMode && (
                                 <TouchableOpacity
                                     onPress={startEditing}
                                     style={styles.headerButton}
