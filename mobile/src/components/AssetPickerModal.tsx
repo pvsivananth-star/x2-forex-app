@@ -1,7 +1,7 @@
 import React, {useMemo,} from 'react';
 
 import {FlatList, Modal, Text, TextInput, TouchableOpacity, View,} from 'react-native';
-import {styles} from './AssetPickerModal.styles';
+import {styles, themed} from './AssetPickerModal.styles';
 
 import {MarketAsset,} from '../types';
 
@@ -44,301 +44,86 @@ export const AssetPickerModal: React.FC<
          onSelect,
          onClose,
      }) => {
-    const query =
-        search
-            .trim()
-            .toLowerCase();
+    const query = search.trim().toLowerCase();
 
-    const filtered =
-        useMemo(() => {
-            if (!query) {
-                return assets;
-            }
+    const filtered = useMemo(() => {
+        if (!query) {
+            return assets;
+        }
 
-            return assets.filter(
-                (asset) =>
-                    asset.name
-                        .toLowerCase()
-                        .includes(query) ||
-                    (
-                        asset.displaySymbol ??
-                        asset.symbol
-                    )
-                        .toLowerCase()
-                        .includes(
-                            query,
-                        ) ||
-                    asset.symbol
-                        .toLowerCase()
-                        .includes(
-                            query,
-                        ),
-            );
-        }, [
-            assets,
-            query,
-        ]);
+        return assets.filter((asset) =>
+            asset.name.toLowerCase().includes(query) ||
+            (asset.displaySymbol ?? asset.symbol).toLowerCase().includes(query) ||
+            asset.symbol.toLowerCase().includes(query),
+        );
+    }, [assets, query]);
+
+    const s = themed(colors);
 
     return (
-        <Modal
-            visible={visible}
-            transparent
-            animationType="fade"
-            onRequestClose={
-                onClose
-            }
-        >
-            <View
-                style={[
-                    styles.backdrop,
-                    {
-                        backgroundColor:
-                        colors.overlay,
-                    },
-                ]}
-            >
-                <View
-                    style={[
-                        styles.modal,
-                        {
-                            backgroundColor:
-                            colors.surfaceElevated,
+        <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+            <View style={s.backdrop}>
+                <View style={s.modal}>
+                    <View style={s.header}>
+                        <View style={s.headerText}>
+                            <Text style={s.title}>{title}</Text>
 
-                            borderColor:
-                            colors.border,
-                        },
-                    ]}
-                >
-                    <View
-                        style={
-                            styles.header
-                        }
-                    >
-                        <View
-                            style={
-                                styles.headerText
-                            }
-                        >
-                            <Text
-                                style={[
-                                    styles.title,
-                                    {
-                                        color:
-                                        colors.text,
-                                    },
-                                ]}
-                            >
-                                {title}
-                            </Text>
-
-                            <Text
-                                style={[
-                                    styles.count,
-                                    {
-                                        color:
-                                        colors.dim,
-                                    },
-                                ]}
-                            >
-                                {query
-                                    ? `${filtered.length} matches`
-                                    : `${assets.length} available`}
-                            </Text>
+                            <Text style={s.count}>{query ? `${filtered.length} matches` : `${assets.length} available`}</Text>
                         </View>
 
-                        <TouchableOpacity
-                            onPress={
-                                onClose
-                            }
-                        >
-                            <Text
-                                style={[
-                                    styles.close,
-                                    {
-                                        color:
-                                        colors.muted,
-                                    },
-                                ]}
-                            >
-                                ×
-                            </Text>
+                        <TouchableOpacity onPress={onClose}>
+                            <Text style={s.close}>×</Text>
                         </TouchableOpacity>
                     </View>
 
                     <TextInput
                         value={search}
-                        onChangeText={
-                            onSearch
-                        }
+                        onChangeText={onSearch}
                         autoFocus
-                        placeholder={
-                            placeholder
-                        }
-                        placeholderTextColor={
-                            colors.dim
-                        }
-                        style={[
-                            styles.search,
-                            {
-                                color:
-                                colors.text,
-
-                                backgroundColor:
-                                colors.surface,
-
-                                borderColor:
-                                colors.border,
-                            },
-                        ]}
+                        placeholder={placeholder}
+                        placeholderTextColor={colors.dim}
+                        style={s.search(colors)}
                     />
 
                     <FlatList
                         data={filtered}
-                        keyExtractor={(
-                            item,
-                        ) =>
-                            item.symbol
-                        }
-                        style={
-                            styles.results
-                        }
+                        keyExtractor={(item) => item.symbol}
+                        style={s.results}
                         keyboardShouldPersistTaps="handled"
-                        initialNumToRender={
-                            40
-                        }
-                        maxToRenderPerBatch={
-                            40
-                        }
+                        initialNumToRender={40}
+                        maxToRenderPerBatch={40}
                         windowSize={8}
                         removeClippedSubviews
-                        renderItem={({
-                                         item,
-                                     }) => {
-                            const symbol =
-                                item.symbol;
+                        renderItem={({item}) => {
+                            const symbol = item.symbol;
 
-                            const alreadySelected =
-                                selected.includes(
-                                    symbol,
-                                );
+                            const alreadySelected = selected.includes(symbol);
 
-                            const displaySymbol =
-                                item.displaySymbol ??
-                                symbol;
+                            const displaySymbol = item.displaySymbol ?? symbol;
 
                             return (
                                 <TouchableOpacity
-                                    disabled={
-                                        alreadySelected
-                                    }
-                                    onPress={() =>
-                                        onSelect(
-                                            symbol,
-                                        )
-                                    }
-                                    style={[
-                                        styles.result,
-                                        {
-                                            borderBottomColor:
-                                            colors.border,
-
-                                            opacity:
-                                                alreadySelected
-                                                    ? 0.4
-                                                    : 1,
-                                        },
-                                    ]}
+                                    disabled={alreadySelected}
+                                    onPress={() => onSelect(symbol)}
+                                    style={s.result(colors, alreadySelected)}
                                 >
-                                    <View
-                                        style={
-                                            styles.resultText
-                                        }
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.symbol,
-                                                {
-                                                    color:
-                                                    colors.text,
-                                                },
-                                            ]}
-                                        >
-                                            {
-                                                displaySymbol
-                                            }
-                                        </Text>
+                                    <View style={s.resultText}>
+                                        <Text style={s.symbol(colors)}>{displaySymbol}</Text>
 
-                                        <Text
-                                            style={[
-                                                styles.name,
-                                                {
-                                                    color:
-                                                    colors.muted,
-                                                },
-                                            ]}
-                                            numberOfLines={
-                                                1
-                                            }
-                                        >
-                                            {
-                                                item.name
-                                            }
+                                        <Text style={s.name(colors)} numberOfLines={1}>
+                                            {item.name}
                                         </Text>
                                     </View>
 
-                                    {alreadySelected && (
-                                        <Text
-                                            style={[
-                                                styles.added,
-                                                {
-                                                    color:
-                                                    colors.positive,
-                                                },
-                                            ]}
-                                        >
-                                            Added
-                                        </Text>
-                                    )}
+                                    {alreadySelected && <Text style={s.added(colors)}>Added</Text>}
                                 </TouchableOpacity>
                             );
                         }}
-                        ListEmptyComponent={
-                            <Text
-                                style={[
-                                    styles.empty,
-                                    {
-                                        color:
-                                        colors.muted,
-                                    },
-                                ]}
-                            >
-                                No matching assets
-                            </Text>
-                        }
+                        ListEmptyComponent={<Text style={s.empty(colors)}>No matching assets</Text>}
                     />
 
-                    <TouchableOpacity
-                        onPress={
-                            onClose
-                        }
-                        style={[
-                            styles.cancel,
-                            {
-                                borderColor:
-                                colors.border,
-                            },
-                        ]}
-                    >
-                        <Text
-                            style={{
-                                color:
-                                colors.muted,
-                                fontWeight:
-                                    '800',
-                            }}
-                        >
-                            Close
-                        </Text>
+                    <TouchableOpacity onPress={onClose} style={s.cancel(colors)}>
+                        <Text style={{color: colors.muted, fontWeight: '800'}}>Close</Text>
                     </TouchableOpacity>
                 </View>
             </View>

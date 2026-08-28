@@ -6,7 +6,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import {styles} from './SettingsModal.styles';
+import {styles, themed} from './SettingsModal.styles';
 
 import {
     DecimalPlaces,
@@ -51,6 +51,8 @@ export const SettingsModal: React.FC<
          onClose,
          onResetMarketDefaults,
      }) => {
+    const s = themed(colors);
+
     return (
         <Modal
             visible={visible}
@@ -58,267 +60,70 @@ export const SettingsModal: React.FC<
             animationType="slide"
             onRequestClose={onClose}
         >
-            <View
-                style={[
-                    styles.backdrop,
-                    {
-                        backgroundColor:
-                        colors.overlay,
-                    },
-                ]}
-            >
-                <View
-                    style={[
-                        styles.modal,
-                        {
-                            backgroundColor:
-                            colors.surfaceElevated,
-                            borderColor:
-                            colors.border,
-                        },
-                    ]}
-                >
-                    <View style={styles.header}>
-                        <Text
-                            style={[
-                                styles.title,
-                                {
-                                    color:
-                                    colors.text,
-                                },
-                            ]}
-                        >
-                            Settings
-                        </Text>
+            <View style={s.backdrop}>
+                <View style={s.modal}>
+                    <View style={s.header}>
+                        <Text style={s.title}>Settings</Text>
 
-                        <TouchableOpacity
-                            onPress={onClose}
-                        >
-                            <Text
-                                style={[
-                                    styles.close,
-                                    {
-                                        color:
-                                        colors.muted,
-                                    },
-                                ]}
-                            >
-                                ×
-                            </Text>
+                        <TouchableOpacity onPress={onClose}>
+                            <Text style={s.close}>×</Text>
                         </TouchableOpacity>
                     </View>
 
-                    <Text
-                        style={[
-                            styles.section,
-                            {
-                                color:
-                                colors.muted,
-                            },
-                        ]}
-                    >
-                        Appearance
-                    </Text>
+                    <Text style={s.section}>Appearance</Text>
 
-                    <View style={styles.options}>
+                    <View style={s.options}>
                         {(
                             [
                                 ['system', 'System'],
                                 ['light', 'Light'],
                                 ['dark', 'Dark'],
                             ] as const
-                        ).map(
-                            ([value, label]) => (
-                                <TouchableOpacity
-                                    key={value}
-                                    onPress={() =>
-                                        onThemeChange(
-                                            value,
-                                        )
-                                    }
-                                    style={[
-                                        styles.option,
-                                        {
-                                            backgroundColor:
-                                                theme ===
-                                                value
-                                                    ? colors.accentStrong
-                                                    : colors.surface,
-
-                                            borderColor:
-                                                theme ===
-                                                value
-                                                    ? colors.accent
-                                                    : colors.border,
-                                        },
-                                    ]}
-                                >
-                                    <Text
-                                        style={{
-                                            color:
-                                                theme ===
-                                                value
-                                                    ? '#FFFFFF'
-                                                    : colors.muted,
-
-                                            fontWeight:
-                                                '800',
-                                        }}
-                                    >
-                                        {label}
-                                    </Text>
-                                </TouchableOpacity>
-                            ),
-                        )}
+                        ).map(([value, label]) => (
+                            <TouchableOpacity
+                                key={value}
+                                onPress={() => onThemeChange(value)}
+                                style={s.option(theme === value, colors)}
+                            >
+                                <Text style={s.optionText(theme === value, colors)}>{label}</Text>
+                            </TouchableOpacity>
+                        ))}
                     </View>
 
-                    <Text
-                        style={[
-                            styles.section,
-                            {
-                                color:
-                                colors.muted,
-                            },
-                        ]}
-                    >
-                        Decimal Places
-                    </Text>
+                    <Text style={s.section}>Decimal Places</Text>
 
-                    <View style={styles.options}>
-                        {([2, 3, 4] as const).map(
-                            (value) => (
-                                <TouchableOpacity
-                                    key={value}
-                                    onPress={() =>
-                                        onDecimalChange(
-                                            value,
-                                        )
-                                    }
-                                    style={[
-                                        styles.option,
-                                        {
-                                            backgroundColor:
-                                                decimalPlaces ===
-                                                value
-                                                    ? colors.accentStrong
-                                                    : colors.surface,
-
-                                            borderColor:
-                                                decimalPlaces ===
-                                                value
-                                                    ? colors.accent
-                                                    : colors.border,
-                                        },
-                                    ]}
-                                >
-                                    <Text
-                                        style={{
-                                            color:
-                                                decimalPlaces ===
-                                                value
-                                                    ? '#FFFFFF'
-                                                    : colors.muted,
-
-                                            fontWeight:
-                                                '800',
-                                        }}
-                                    >
-                                        {value}
-                                    </Text>
-                                </TouchableOpacity>
-                            ),
-                        )}
+                    <View style={s.options}>
+                        {([2, 3, 4] as const).map((value) => (
+                            <TouchableOpacity
+                                key={value}
+                                onPress={() => onDecimalChange(value)}
+                                style={s.option(decimalPlaces === value, colors)}
+                            >
+                                <Text style={s.optionText(decimalPlaces === value, colors)}>{value}</Text>
+                            </TouchableOpacity>
+                        ))}
                     </View>
 
-                    <Text
-                        style={[
-                            styles.section,
-                            {
-                                color:
-                                colors.muted,
-                            },
-                        ]}
-                    >
-                        Reset App Settings
-                    </Text>
+                    <Text style={s.section}>Reset App Settings</Text>
 
-                    <Text
-                        style={[
-                            styles.info,
-                            {
-                                color:
-                                colors.muted,
-                            },
-                        ]}
-                    >
+                    <Text style={s.info(colors)}>
                         Caution: Application will reset to system defaults. Your local changes will be overriden.
                     </Text>
 
-                    <TouchableOpacity
-                        onPress={onResetMarketDefaults}
-                        style={[
-                            styles.reset,
-                            {
-                                backgroundColor:
-                                colors.surface,
-                                borderColor:
-                                colors.warning,
-                            },
-                        ]}
-                    >
-                        <Text
-                            style={[
-                                styles.resetText,
-                                {
-                                    color:
-                                    colors.warning,
-                                },
-                            ]}
-                        >
-                            Apply Default Settings
-                        </Text>
+                    <TouchableOpacity onPress={onResetMarketDefaults} style={s.reset(colors)}>
+                        <Text style={s.resetText(colors)}>Apply Default Settings</Text>
                     </TouchableOpacity>
 
-                    <Text
-                        style={[
-                            styles.section,
-                            {
-                                color:
-                                colors.muted,
-                            },
-                        ]}
-                    >
-                        Refresh
-                    </Text>
+                    <Text style={s.section}>Refresh</Text>
 
-                    <Text
-                        style={[
-                            styles.info,
-                            {
-                                color:
-                                colors.muted,
-                            },
-                        ]}
-                    >
+                    <Text style={s.info(colors)}>
                         Rates automatically refresh
                         every 3 minutes. Tap the
                         circular control in the header
                         to refresh immediately.
                     </Text>
 
-                    <Text
-                        style={[
-                            styles.disclaimer,
-                            {
-                                color:
-                                colors.warning,
-                                borderColor:
-                                colors.border,
-                                backgroundColor:
-                                colors.surface,
-                            },
-                        ]}
-                    >
+                    <Text style={s.disclaimer(colors)}>
                         Disclaimer: Exchange rates
                         provided in this app are for
                         informational and indicative
