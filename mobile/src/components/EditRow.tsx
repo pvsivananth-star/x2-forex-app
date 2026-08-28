@@ -191,36 +191,36 @@ export const EditRow: React.FC<
 const styles =
     StyleSheet.create({
         row: {
-            minHeight: 46,
-            height: 46,
+            minHeight: 40,
+            height: 40,
             flexDirection: 'row',
             alignItems: 'center',
             borderBottomWidth: 1,
-            borderRadius: 7,
-            marginBottom: 2,
+            borderRadius: 6,
+            marginBottom: 1,
         },
 
         arrows: {
-            width: 40,
+            width: 36,
             alignItems: 'center',
             justifyContent: 'center',
         },
 
         arrowButton: {
-            width: 30,
-            height: 19,
+            width: 28,
+            height: 18,
             alignItems: 'center',
             justifyContent: 'center',
         },
 
         arrow: {
-            fontSize: 15,
+            fontSize: 14,
             fontWeight: '900',
         },
 
         asset: {
             flex: 1,
-            paddingHorizontal: 5,
+            paddingHorizontal: 6,
         },
 
         symbol: {
@@ -234,14 +234,14 @@ const styles =
         },
 
         remove: {
-            width: 42,
-            height: 42,
+            width: 36,
+            height: 36,
             alignItems: 'center',
             justifyContent: 'center',
         },
 
         removeText: {
-            fontSize: 25,
+            fontSize: 22,
             fontWeight: '400',
         },
     });

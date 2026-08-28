@@ -1,5 +1,7 @@
 import {useSyncExternalStore} from 'react';
 import {DEFAULT_FX, FX_CATALOG} from '../catalogs/currencies';
+import {METAL_CATALOG} from '../catalogs';
+import {EQUITY_ORDER} from '../catalogs/equities';
 import {calculateFromAnchor, normalizeBaseRates, RateBase} from '../utils/rateEngine';
 import {MarketAsset} from '../models/market';
 import {TabCategory} from '../models/settings';
@@ -16,9 +18,25 @@ const initialBase: RateBase = normalizeBaseRates(
     Object.fromEntries(FX_CATALOG.map(asset => [asset.symbol, asset.rate])),
 );
 
+const initialAssets: Record<string, MarketAsset> = Object.fromEntries([
+    ...FX_CATALOG.map(asset => [asset.symbol, asset] as const),
+    ...METAL_CATALOG.map(asset => [asset.symbol, asset] as const),
+    ...EQUITY_ORDER.map(item => [
+        item.symbol,
+        {
+            symbol: item.symbol,
+            name: item.name,
+            rate: 0,
+            referenceRate: 0,
+            changePct: 0,
+            category: 'equity' as const,
+        },
+    ] as const),
+]);
+
 let state: State = {
     activeTab: 'fx',
-    assets: Object.fromEntries(FX_CATALOG.map(asset => [asset.symbol, asset])),
+    assets: initialAssets,
     baseRates: initialBase,
     editedSymbol: null,
     editedValues: {},

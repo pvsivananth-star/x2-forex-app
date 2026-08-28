@@ -5,7 +5,7 @@ import {TabCategory} from '../../models/market';
 const TABS: { key: TabCategory; label: string }[] = [{key: 'dashboard', label: 'Dashboard'}, {
     key: 'fx',
     label: 'Forex'
-}, {key: 'crypto', label: 'Crypto'}, {key: 'metals', label: 'Metals'}, {key: 'eq', label: 'EQ'}, {
+}, {key: 'crypto', label: 'Crypto'}, {key: 'metals', label: 'Metals'}, {key: 'equity', label: 'EQ'}, {
     key: 'portfolio',
     label: 'Portfolio'
 }];

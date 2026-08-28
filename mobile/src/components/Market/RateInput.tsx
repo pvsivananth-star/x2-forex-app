@@ -56,6 +56,16 @@ export function RateInput({
         }
     };
 
+    const onKeyPress = (e: any) => {
+        const key = e?.nativeEvent?.key;
+
+        // Commit on Tab keypress (hardware keyboard). Blur to allow focus to move.
+        if (key === 'Tab') {
+            commit();
+            inputRef.current?.blur();
+        }
+    };
+
     return (
         <TextInput
             ref={inputRef}
@@ -77,6 +87,8 @@ export function RateInput({
                  */
                 setText(nextText);
             }}
+
+            onKeyPress={onKeyPress}
 
             onBlur={() => {
                 // Do not auto-commit on blur; stop editing so external updates can sync the display.

@@ -35,8 +35,8 @@ export function MarketRow({item, editable = false, active = false, onChange, onA
 
 const styles = StyleSheet.create({
     row: {
-        minHeight: 50,
-        paddingHorizontal: 14,
+        minHeight: 40,
+        paddingHorizontal: 12,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between'

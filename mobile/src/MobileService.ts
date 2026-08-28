@@ -7,6 +7,7 @@ import {
     DEFAULT_CRYPTO,
     DEFAULT_FX,
     DEFAULT_METALS,
+    DEFAULT_EQUITY,
     FX_CATALOG,
     METAL_CATALOG,
     REFRESH_INTERVAL_SECONDS,
@@ -16,7 +17,13 @@ import {
     EQUITY_ORDER,
 } from './catalogs/equities';
 
-import {fetchCryptoCatalog, fetchCryptoData, fetchFxData, fetchMetalsData} from './ratesApi';
+import {
+    fetchCryptoCatalog,
+    fetchCryptoData,
+    fetchEquityData,
+    fetchFxData,
+    fetchMetalsData,
+} from './ratesApi';
 
 import {DecimalPlaces, MarketAsset, PersistedSettings, TabCategory, Tenor, ThemePreference,} from './types';
 
@@ -194,6 +201,11 @@ function categoryForTab(
         return 'metals';
     }
 
+    // Support both legacy 'eq' and the newer 'equity' tab identifiers
+    if (tab === 'eq' || tab === 'equity') {
+        return 'equity';
+    }
+
     return null;
 }
 
@@ -265,19 +277,30 @@ function createCategoryState(
     const catalog =
         category === 'fx'
             ? FX_CATALOG
-            : category === 'metals'
-                ? [
-                    {
-                        symbol: 'USD',
-                        name: 'US Dollar',
-                        rate: 1,
-                        referenceRate: 1,
+            : category === 'equity'
+                ? EQUITY_ORDER.map(
+                    item => ({
+                        symbol: item.symbol,
+                        name: item.name,
+                        rate: 0,
+                        referenceRate: 0,
                         changePct: 0,
-                        category: 'metals' as const,
-                    },
-                    ...METAL_CATALOG,
-                ]
-                : createCryptoAssets();
+                        category: 'equity' as const,
+                    }),
+                )
+                : category === 'metals'
+                    ? [
+                        {
+                            symbol: 'USD',
+                            name: 'US Dollar',
+                            rate: 1,
+                            referenceRate: 1,
+                            changePct: 0,
+                            category: 'metals' as const,
+                        },
+                        ...METAL_CATALOG,
+                    ]
+                    : createCryptoAssets();
 
     return {
         assets: cloneAssets(catalog),
@@ -293,6 +316,9 @@ function createCategoryState(
 
 let fxState =
     createCategoryState('fx');
+
+let equityState =
+    createCategoryState('equity');
 
 let cryptoState =
     createCategoryState('crypto');
@@ -311,6 +337,10 @@ function getCategoryState(
         return cryptoState;
     }
 
+    if (category === 'equity') {
+        return equityState;
+    }
+
     return metalsState;
 }
 
@@ -325,6 +355,11 @@ function setCategoryState(
 
     if (category === 'crypto') {
         cryptoState = value;
+        return;
+    }
+
+    if (category === 'equity') {
+        equityState = value;
         return;
     }
 
@@ -829,6 +864,10 @@ async function persistState(
             ),
         ],
 
+        watchlistEquity: [
+            ...state.watchlistEquity,
+        ],
+
         watchlistCrypto: [
             'USD',
             ...state.watchlistCrypto.filter(
@@ -871,6 +910,12 @@ function getWatchlist(
         return state.isEditMode
             ? state.editWatchlistFx
             : state.watchlistFx;
+    }
+
+    if (category === 'equity') {
+        return state.isEditMode
+            ? state.editWatchlistEquity
+            : state.watchlistEquity;
     }
 
     if (category === 'crypto') {
@@ -920,6 +965,12 @@ export const useMobileStore =
                 ...DEFAULT_FX,
             ],
 
+            watchlistEquity: [
+                'SENSEX',
+                'NIFTY50',
+                ...EQUITY_ORDER.map(item => item.symbol).filter(s => s !== 'SENSEX' && s !== 'NIFTY50'),
+            ],
+
             watchlistCrypto: [
                 ...DEFAULT_CRYPTO,
             ],
@@ -930,6 +981,12 @@ export const useMobileStore =
 
             editWatchlistFx: [
                 ...DEFAULT_FX,
+            ],
+
+            editWatchlistEquity: [
+                'SENSEX',
+                'NIFTY50',
+                ...EQUITY_ORDER.map(item => item.symbol).filter(s => s !== 'SENSEX' && s !== 'NIFTY50'),
             ],
 
             editWatchlistCrypto: [
@@ -2193,6 +2250,13 @@ export const useMobileStore =
                                 watchlistMetals:
                                 metals,
 
+                                // Ensure SENSEX and NIFTY50 remain at the top of equities
+                                watchlistEquity: [
+                                    'SENSEX',
+                                    'NIFTY50',
+                                    ...(saved.watchlistEquity?.length ? saved.watchlistEquity : DEFAULT_EQUITY).filter(s => s !== 'SENSEX' && s !== 'NIFTY50'),
+                                ],
+
                                 editWatchlistFx: [
                                     'USD',
                                     ...fx.filter(
@@ -2213,6 +2277,13 @@ export const useMobileStore =
 
                                 editWatchlistMetals:
                                 metals,
+
+                                // Mirror the same SENSEX/NIFTY ordering for edit list
+                                editWatchlistEquity: [
+                                    'SENSEX',
+                                    'NIFTY50',
+                                    ...(saved.watchlistEquity?.length ? saved.watchlistEquity : DEFAULT_EQUITY).filter(s => s !== 'SENSEX' && s !== 'NIFTY50'),
+                                ],
                             });
 
                             /*

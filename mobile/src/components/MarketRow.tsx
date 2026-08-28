@@ -156,50 +156,68 @@ export const MarketRow: React.FC<
                     styles.rateColumn
                 }
             >
-                <TextInput
-                    value={draft}
-                    onFocus={() => {
-                        setFocused(true);
-                        onActivate?.();
-                    }}
-                    onChangeText={
-                        setDraft
-                    }
-                    onBlur={() => {
-                        // Do not commit on blur — only commit on explicit submit (enter/tab).
-                        setFocused(false);
-                        onDeactivate?.();
-                    }}
+                {asset.category === 'equity' ? (
+                    // Render a non-editable label for equity rates
+                    <Text
+                        style={[
+                            styles.input,
+                            {
+                                color: colors.text,
+                                backgroundColor: 'transparent',
+                                borderWidth: 0,
+                                textAlign: 'right',
+                            },
+                        ]}
+                        accessibilityLabel={`Rate for ${displaySymbol}`}
+                    >
+                        {formatted}
+                    </Text>
+                ) : (
+                    <TextInput
+                        value={draft}
+                        onFocus={() => {
+                            setFocused(true);
+                            onActivate?.();
+                        }}
+                        onChangeText={
+                            setDraft
+                        }
+                        onBlur={() => {
+                            // Do not commit on blur — only commit on explicit submit (enter/tab).
+                            setFocused(false);
+                            onDeactivate?.();
+                        }}
 
-                    onSubmitEditing={() => {
-                        setFocused(false);
-                        // Commit only when user submits (Enter/Done)
-                        commit(draft);
-                    }}
-                    selectTextOnFocus
-                    keyboardType="decimal-pad"
-                    returnKeyType="done"
-                    style={[
-                        styles.input,
-                        {
-                            color:
-                            colors.text,
+                        onSubmitEditing={() => {
+                            setFocused(false);
+                            // Commit only when user submits (Enter/Done)
+                            commit(draft);
+                        }}
+                        selectTextOnFocus
+                        keyboardType="decimal-pad"
+                        returnKeyType="done"
+                        style={[
+                            styles.input,
+                            {
+                                color:
+                                colors.text,
 
-                            backgroundColor:
-                            colors.surface,
+                                backgroundColor:
+                                colors.surface,
 
-                            // Show dark border only when the parent marks this row active.
-                            // Avoid relying on local focus state for visuals so the parent-controlled
-                            // active indicator updates immediately when focus moves.
-                            borderColor: active ? '#222' : colors.border,
+                                // Show dark border only when the parent marks this row active.
+                                // Avoid relying on local focus state for visuals so the parent-controlled
+                                // active indicator updates immediately when focus moves.
+                                borderColor: active ? '#222' : colors.border,
 
-                            borderWidth: active ? 1.5 : 1,
-                        },
-                    ]}
-                    accessibilityLabel={
-                        `Rate for ${displaySymbol}`
-                    }
-                />
+                                borderWidth: active ? 1.5 : 1,
+                            },
+                        ]}
+                        accessibilityLabel={
+                            `Rate for ${displaySymbol}`
+                        }
+                    />
+                )}
             </View>
 
             <View

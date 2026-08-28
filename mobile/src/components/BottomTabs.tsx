@@ -25,7 +25,7 @@ const TABS: {
         icon: 'FX',
     },
     {
-        key: 'eq',
+        key: 'equity',
         label: 'EQ',
         icon: 'EQ',
     },
@@ -37,7 +37,7 @@ const TABS: {
     {
         key: 'metals',
         label: 'Metals',
-        icon: 'Ag',
+        icon: 'Au',
     },
     {
         key: 'portfolio',

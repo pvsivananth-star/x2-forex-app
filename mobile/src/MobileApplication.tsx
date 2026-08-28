@@ -40,7 +40,7 @@ const TAB_TITLES: Record<
     string
 > = {
     fx: 'Forex',
-    eq: 'Equities',
+    equity: 'Equities',
     crypto: 'Crypto',
     metals: 'Metals',
     portfolio: 'Portfolio',
@@ -69,10 +69,12 @@ export const MobileApplication: React.FC =
             isEditMode,
 
             watchlistFx,
+            watchlistEquity,
             watchlistCrypto,
             watchlistMetals,
 
             editWatchlistFx,
+            editWatchlistEquity,
             editWatchlistCrypto,
             editWatchlistMetals,
 
