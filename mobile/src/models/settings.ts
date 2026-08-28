@@ -7,7 +7,9 @@ import type {
 
 export interface Settings {
     activeTab: TabCategory;
-    tenor: Tenor;
+    tenorFx: Tenor;
+    tenorCrypto: Tenor;
+    tenorMetals: Tenor;
     decimalPlaces: DecimalPlaces;
     theme: ThemePreference;
 }
