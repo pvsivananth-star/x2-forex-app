@@ -794,8 +794,18 @@ async function persistState(
         activeTab:
         state.activeTab,
 
-        tenor:
-        state.tenor,
+        /*
+         * Persist the tenor independently for
+         * each market.
+         */
+        tenorFx:
+        state.tenorFx,
+
+        tenorCrypto:
+        state.tenorCrypto,
+
+        tenorMetals:
+        state.tenorMetals,
 
         decimalPlaces:
         state.decimalPlaces,
@@ -803,20 +813,30 @@ async function persistState(
         theme:
         state.theme,
 
-        watchlistFx:
-        state.watchlistFx,
+        watchlistFx: [
+            'USD',
+            ...state.watchlistFx.filter(
+                symbol =>
+                    symbol !== 'USD',
+            ),
+        ],
 
-        watchlistCrypto:
-        state.watchlistCrypto,
+        watchlistCrypto: [
+            'USD',
+            ...state.watchlistCrypto.filter(
+                symbol =>
+                    symbol !== 'USD',
+            ),
+        ],
 
-        watchlistMetals:
-        state.watchlistMetals,
+        watchlistMetals: [
+            'USD',
+            ...state.watchlistMetals.filter(
+                symbol =>
+                    symbol !== 'USD',
+            ),
+        ],
 
-        /*
-         * Keep the old field for compatibility.
-         * The actual persisted anchors are now
-         * category-specific.
-         */
         editedRates:
         state.editedRates,
 
@@ -1519,11 +1539,30 @@ export const useMobileStore =
                 /*
                  * Reset ONLY FX, Crypto and Metals.
                  * Theme, decimal places and active tab
-                 * are intentionally preserved.
-                 *
-                 * Each market also gets its own default tenor.
+                 * remain unchanged.
                  */
 
+                const fxDefaults = [
+                    ...DEFAULT_FX,
+                ];
+
+                const cryptoDefaults = [
+                    'USD',
+                    ...CRYPTO_DEFAULT_CATALOG.map(
+                        asset => asset.symbol,
+                    ),
+                ];
+
+                const metalsDefaults = [
+                    'USD',
+                    ...DEFAULT_METALS.filter(
+                        symbol => symbol !== 'USD',
+                    ),
+                ];
+
+                /*
+                 * Reset the underlying category states.
+                 */
                 fxState =
                     createCategoryState('fx');
 
@@ -1534,89 +1573,75 @@ export const useMobileStore =
                     createCategoryState('metals');
 
                 /*
-                 * Metals:
-                 * USD is permanently first.
-                 * XAU_1OZ is the default anchor at 1.
+                 * Metals always starts with USD first
+                 * and XAU_1OZ as the default anchor.
                  */
-                const metalAssets = {
-                    USD: {
-                        symbol: 'USD',
-                        name: 'US Dollar',
-                        rate: 1,
-                        referenceRate: 1,
-                        changePct: 0,
-                        category: 'metals' as const,
-                    },
-
-                    ...metalsState.assets,
-                };
-
-                const metalMarketRates = {
-                    USD: {
-                        rate: 1,
-                        referenceRate: 1,
-                    },
-
-                    ...metalsState.marketRates,
-                };
-
                 metalsState = {
                     ...metalsState,
-
-                    assets: metalAssets,
-
-                    marketRates:
-                    metalMarketRates,
 
                     editedSymbol:
                         'XAU_1OZ',
 
-                    editedValue: 1,
+                    editedValue:
+                        1,
                 };
 
                 /*
-                 * Restore the three market tenors.
+                 * Restore the actual Zustand state used
+                 * by the screens and edit mode.
                  */
+                // Apply core reset values first so state updates immediately.
                 set({
-                    tenorFx: '1D',
-                    tenorCrypto: '1W',
-                    tenorMetals: '1M',
-
-                    watchlistFx:
-                    fxState.watchlist,
+                    watchlistFx: fxDefaults,
 
                     watchlistCrypto:
-                    cryptoState.watchlist,
+                    cryptoDefaults,
 
                     watchlistMetals:
-                    metalsState.watchlist,
+                    metalsDefaults,
 
                     editWatchlistFx:
-                    fxState.watchlist,
+                        [...fxDefaults],
 
                     editWatchlistCrypto:
-                    cryptoState.watchlist,
+                        [...cryptoDefaults],
 
                     editWatchlistMetals:
-                    metalsState.watchlist,
+                        [...metalsDefaults],
 
-                    assets: {
-                        ...fxState.assets,
-                        ...cryptoState.assets,
-                        ...metalsState.assets,
-                    },
+                    // Reset per-market tenors to defaults
+                    tenorFx: '1D',
+
+                    tenorCrypto: '1W',
+
+                    tenorMetals: '1M',
+
+                    // Exit edit mode so UI shows the active watchlists
+                    isEditMode: false,
                 });
 
                 /*
-                 * Persist the reset state first.
+                 * Persist the complete reset state.
                  */
                 await persistState(
                     get(),
                 );
 
+                // Materialize the active category now that core settings are applied.
+                set({
+                    ...materializeActiveCategory(
+                        get(),
+                    ),
+                });
+
+                // Re-run the existing setActiveTab logic for the current tab to ensure all
+                // derived values and listeners are updated the same way as a tab switch.
+                // This triggers the materialization path that the UI uses elsewhere.
+                void get().setActiveTab(get().activeTab);
+
                 /*
-                 * Fetch fresh market data using
-                 * the restored per-screen tenors.
+                 * Refresh using the newly restored
+                 * per-screen tenors and watchlists.
                  */
                 await get().forceRefresh();
             },

@@ -1140,6 +1140,9 @@ export const MobileApplication: React.FC =
                         await resetMarketDefaults();
 
                         setDraftRates({});
+
+                        // Close the settings modal after resetting defaults
+                        setSettingsOpen(false);
                     }}
                     onClose={() =>
                         setSettingsOpen(

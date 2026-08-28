@@ -36,7 +36,7 @@ interface SettingsModalProps {
 
     onClose: () => void;
 
-    onResetDefaults: () => void;
+    onResetMarketDefaults: () => void;
 }
 
 export const SettingsModal: React.FC<
@@ -49,7 +49,7 @@ export const SettingsModal: React.FC<
          onThemeChange,
          onDecimalChange,
          onClose,
-         onResetDefaults,
+         onResetMarketDefaults,
      }) => {
     return (
         <Modal
@@ -257,7 +257,7 @@ export const SettingsModal: React.FC<
                     </Text>
 
                     <TouchableOpacity
-                        onPress={onResetDefaults}
+                        onPress={onResetMarketDefaults}
                         style={[
                             styles.reset,
                             {
