@@ -1,6 +1,7 @@
 import React from 'react';
-import {Pressable, StyleSheet, Text, View} from 'react-native';
+import {Pressable, Text, View} from 'react-native';
 import {TabCategory} from '../../models/market';
+import {styles} from './BottomTabs.styles';
 
 const TABS: { key: TabCategory; label: string }[] = [{key: 'dashboard', label: 'Dashboard'}, {
     key: 'fx',
@@ -18,11 +19,3 @@ export function BottomTabs({activeTab, onChange}: { activeTab: TabCategory; onCh
         style={{fontWeight: activeTab === t.key ? '800' : '400'}}>{t.label}</Text></Pressable>)}</View>
 }
 
-const styles = StyleSheet.create({
-    root: {
-        flexDirection: 'row',
-        borderTopWidth: 1,
-        borderTopColor: '#E2E2E2',
-        paddingVertical: 8
-    }, tab: {flex: 1, alignItems: 'center'}
-});

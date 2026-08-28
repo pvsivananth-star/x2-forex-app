@@ -34,12 +34,3 @@ export function MarketRow({item, editable = false, active = false, onChange, onA
     );
 }
 
-const styles = StyleSheet.create({
-    row: {
-        minHeight: 40,
-        paddingHorizontal: 12,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-    }, name: {flex: 1}, symbol: {fontWeight: '700'}, label: {fontSize: 12, opacity: .65}
-});

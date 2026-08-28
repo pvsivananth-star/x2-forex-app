@@ -1,6 +1,7 @@
 import React from 'react';
 
-import {StyleSheet, TouchableOpacity, View,} from 'react-native';
+import {TouchableOpacity, View,} from 'react-native';
+import {styles} from './RefreshTimer.styles';
 
 interface RefreshTimerProps {
     countdown: number;
@@ -125,36 +126,4 @@ export const RefreshTimer: React.FC<
     );
 };
 
-const styles =
-    StyleSheet.create({
-        button: {
-            width: 30,
-            height: 30,
-            alignItems: 'center',
-            justifyContent:
-                'center',
-        },
-
-        ring: {
-            width: 25,
-            height: 25,
-            borderRadius: 13,
-            borderWidth: 1,
-            alignItems: 'center',
-            justifyContent:
-                'center',
-        },
-
-        segment: {
-            position: 'absolute',
-            width: 2.5,
-            height: 6,
-            borderRadius: 1.5,
-        },
-
-        inner: {
-            width: 17,
-            height: 17,
-            borderRadius: 9,
-        },
-    });
+// styles extracted

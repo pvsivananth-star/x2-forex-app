@@ -1,5 +1,6 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {TextInput} from 'react-native';
+import {styles} from './RateInput.styles';
 
 export function RateInput({
                               value,
@@ -102,17 +103,14 @@ export function RateInput({
                 inputRef.current?.blur();
             }}
 
-            style={{
-                minWidth: 84,
-                textAlign: 'right',
-
-                // Visual indicator for the active (editing) field — rely on parent-controlled `active`
-                borderWidth: active ? 1.5 : 1,
-                borderColor: active ? '#222' : undefined,
-                borderRadius: 6,
-                paddingHorizontal: 8,
-                paddingVertical: 6,
-            }}
+            style={[
+                styles.input,
+                {
+                    // Visual indicator for the active (editing) field — rely on parent-controlled `active`
+                    borderWidth: active ? 1.5 : 1,
+                    borderColor: active ? '#222' : undefined,
+                },
+            ]}
         />
     );
 }
