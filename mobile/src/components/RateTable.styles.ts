@@ -87,6 +87,8 @@ export const headerStyles = (colors: any) => ({
     headerText: (colors: any) => ({...styles.headerText, color: colors.dim}),
 });
 
+import { getChangeColor } from './styles/sharedStyles';
+
 export const rowStyles = (colors: any, active: boolean, positive: boolean) => ({
     row: {...styles.row, borderBottomColor: colors.border},
     asset: styles.asset,
@@ -103,6 +105,6 @@ export const rowStyles = (colors: any, active: boolean, positive: boolean) => ({
     change: styles.change,
     changeText: (colors: any, positive: boolean) => ({
         ...styles.changeText,
-        color: positive ? colors.green : colors.red,
+        color: getChangeColor(colors, positive),
     }),
 });

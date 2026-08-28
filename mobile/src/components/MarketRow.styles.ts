@@ -51,6 +51,8 @@ export const styles = StyleSheet.create({
     },
 });
 
+import { getChangeColor } from './styles/sharedStyles';
+
 export const makeRowStyles = (colors: any, active: boolean, isEquity: boolean, positive: boolean) => ({
     row: {
         ...styles.row,
@@ -82,6 +84,6 @@ export const makeRowStyles = (colors: any, active: boolean, isEquity: boolean, p
 
     changeText: {
         ...styles.change,
-        color: positive ? colors.positive : colors.negative,
+        color: getChangeColor(colors, positive),
     },
 });
