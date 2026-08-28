@@ -662,10 +662,21 @@ function calculateCryptoAnchor(
          * Guarantee exact value entered.
          */
         if (assets[symbol]) {
+            const anchorSnapshot = anchorMarket;
+
+            const anchorReferenceForAsset =
+                anchorSnapshot && Number.isFinite(anchorSnapshot.rate) && anchorSnapshot.rate !== 0
+                    ? value * (anchorSnapshot.referenceRate / anchorSnapshot.rate)
+                    : value;
+
             assets[symbol] = {
                 ...assets[symbol],
 
                 rate: value,
+
+                referenceRate: anchorReferenceForAsset,
+
+                changePct: percentage(value, anchorReferenceForAsset),
 
                 isCustomEdited: true,
             };
@@ -1632,6 +1643,19 @@ export const useMobileStore =
 
                 metalsState =
                     createCategoryState('metals');
+
+                /*
+                 * Crypto default anchor: BTC = 1
+                 */
+                cryptoState = {
+                    ...cryptoState,
+
+                    editedSymbol:
+                        'bitcoin',
+
+                    editedValue:
+                        1,
+                };
 
                 /*
                  * Metals always starts with USD first
