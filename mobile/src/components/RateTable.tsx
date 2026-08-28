@@ -319,9 +319,13 @@ export const RateTable: React.FC<
                             </View>
 
                             <View style={r.change}>
-                                <Text style={r.changeText(colors, asset.changePct >= 0)}>
-                                    {asset.changePct >= 0 ? '+' : ''}{asset.changePct.toFixed(2)}%
-                                </Text>
+                                {!(symbol === 'USD' && (category === 'crypto' || category === 'metals')) ? (
+                                    <Text style={r.changeText(colors, asset.changePct >= 0)}>
+                                        {asset.changePct >= 0 ? '+' : ''}{asset.changePct.toFixed(2)}%
+                                    </Text>
+                                ) : (
+                                    <Text />
+                                )}
                             </View>
                         </View>
                     );
