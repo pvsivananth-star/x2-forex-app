@@ -1518,8 +1518,10 @@ export const useMobileStore =
             resetMarketDefaults: async () => {
                 /*
                  * Reset ONLY FX, Crypto and Metals.
-                 * Theme, decimal places, tenor and active tab
+                 * Theme, decimal places and active tab
                  * are intentionally preserved.
+                 *
+                 * Each market also gets its own default tenor.
                  */
 
                 fxState =
@@ -1573,86 +1575,50 @@ export const useMobileStore =
                 };
 
                 /*
-                 * Reset watchlists.
-                 * USD is permanently first in FX and Crypto.
-                 * USD is also first in Metals.
+                 * Restore the three market tenors.
                  */
-                const fx = [
-                    'USD',
-                    ...DEFAULT_FX.filter(
-                        symbol =>
-                            symbol !== 'USD',
-                    ),
-                ];
-
-                const crypto = [
-                    'USD',
-                    ...DEFAULT_CRYPTO.filter(
-                        symbol =>
-                            symbol !== 'USD',
-                    ),
-                ];
-
-                const metals = [
-                    'USD',
-                    ...DEFAULT_METALS.filter(
-                        symbol =>
-                            symbol !== 'USD',
-                    ),
-                ];
-
                 set({
-                    watchlistFx: fx,
+                    tenorFx: '1D',
+                    tenorCrypto: '1W',
+                    tenorMetals: '1M',
+
+                    watchlistFx:
+                    fxState.watchlist,
 
                     watchlistCrypto:
-                    crypto,
+                    cryptoState.watchlist,
 
                     watchlistMetals:
-                    metals,
+                    metalsState.watchlist,
 
-                    editWatchlistFx: [
-                        ...fx,
-                    ],
+                    editWatchlistFx:
+                    fxState.watchlist,
 
-                    editWatchlistCrypto: [
-                        ...crypto,
-                    ],
+                    editWatchlistCrypto:
+                    cryptoState.watchlist,
 
-                    editWatchlistMetals: [
-                        ...metals,
-                    ],
+                    editWatchlistMetals:
+                    metalsState.watchlist,
+
+                    assets: {
+                        ...fxState.assets,
+                        ...cryptoState.assets,
+                        ...metalsState.assets,
+                    },
                 });
 
                 /*
-                 * Apply the default XAU anchor from the
-                 * fresh market snapshot.
+                 * Persist the reset state first.
                  */
-                metalsState =
-                    calculateFiatOrMetalAnchor(
-                        metalsState,
-                        'XAU_1OZ',
-                        1,
-                    );
-
-                setCategoryState(
-                    'metals',
-                    metalsState,
-                );
-
-                /*
-                 * Refresh the currently displayed category.
-                 */
-                const state = get();
-
-                set({
-                    ...materializeActiveCategory(
-                        state,
-                    ),
-                });
-
                 await persistState(
                     get(),
                 );
+
+                /*
+                 * Fetch fresh market data using
+                 * the restored per-screen tenors.
+                 */
+                await get().forceRefresh();
             },
             /* ------------------------------------------------------------------ */
             /* Refresh                                                             */
