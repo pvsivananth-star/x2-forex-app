@@ -1075,3 +1075,125 @@ export async function fetchMetalsData(
 
     return result;
 }
+
+/* -------------------------------------------------------------------------- */
+/* EQUITIES / GLOBAL INDICES                                                  */
+/* -------------------------------------------------------------------------- */
+
+const EQUITY_TICKERS: Record<string, string> = {
+    SPX: '^GSPC',
+    NDX: '^NDX',
+    DJI: '^DJI',
+    RUT: '^RUT',
+
+    FTSE: '^FTSE',
+    DAX: '^GDAXI',
+    CAC: '^FCHI',
+    NIKKEI: '^N225',
+
+    HSI: '^HSI',
+    SHCOMP: '000001.SS',
+    SENSEX: '^BSESN',
+    NIFTY50: '^NSEI',
+
+    KOSPI: '^KS11',
+    ASX200: '^AXJO',
+    TSX: '^GSPTSE',
+    IBOV: '^BVSP',
+};
+
+async function fetchEquityQuote(
+    ticker: string,
+): Promise<{
+    current: number;
+    previous: number;
+} | null> {
+    try {
+        const response = await fetch(
+            `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
+                ticker,
+            )}?interval=1d&range=5d`,
+        );
+
+        if (!response.ok) {
+            return null;
+        }
+
+        const json = await response.json();
+
+        const chart =
+            json?.chart?.result?.[0];
+
+        const closes =
+            chart
+                ?.indicators
+                ?.quote?.[0]
+                ?.close
+                ?.filter(
+                    (
+                        value: number | null,
+                    ): value is number =>
+                        typeof value === 'number' &&
+                        Number.isFinite(value),
+                ) ?? [];
+
+        const current =
+            chart?.meta?.regularMarketPrice ??
+            closes[closes.length - 1];
+
+        if (
+            typeof current !== 'number' ||
+            !Number.isFinite(current) ||
+            closes.length < 1
+        ) {
+            return null;
+        }
+
+        const previous =
+            closes.length >= 2
+                ? closes[closes.length - 2]
+                : current;
+
+        return {
+            current,
+            previous,
+        };
+    } catch {
+        return null;
+    }
+}
+
+export async function fetchEquityData(): Promise<FetchedMap> {
+    const result: FetchedMap = {};
+
+    await Promise.all(
+        Object.entries(EQUITY_TICKERS).map(
+            async ([symbol, ticker]) => {
+                const quote =
+                    await fetchEquityQuote(ticker);
+
+                if (!quote) {
+                    return;
+                }
+
+                result[symbol] = {
+                    rate: Number(
+                        quote.current.toFixed(6),
+                    ),
+
+                    referenceRate: Number(
+                        quote.previous.toFixed(6),
+                    ),
+
+                    changePct:
+                        percentageChange(
+                            quote.current,
+                            quote.previous,
+                        ),
+                };
+            },
+        ),
+    );
+
+    return result;
+}

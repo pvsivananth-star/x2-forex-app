@@ -25,6 +25,11 @@ const TABS: {
         icon: 'FX',
     },
     {
+        key: 'eq',
+        label: 'EQ',
+        icon: 'EQ',
+    },
+    {
         key: 'crypto',
         label: 'Crypto',
         icon: '₿',

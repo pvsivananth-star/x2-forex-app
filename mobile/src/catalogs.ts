@@ -188,6 +188,24 @@ export const DEFAULT_FX = [
     'NOK',
 ];
 
+export const DEFAULT_EQUITY = [
+    'SPX',
+    'NDX',
+    'DJI',
+    'RUT',
+    'FTSE',
+    'DAX',
+    'CAC',
+    'NIKKEI',
+    'HSI',
+    'SHCOMP',
+    'SENSEX',
+    'NIFTY50',
+    'KOSPI',
+    'ASX200',
+    'TSX',
+    'IBOV',
+];
 export const CRYPTO_DEFAULT_CATALOG: MarketAsset[] = [
     {
         symbol: 'bitcoin',

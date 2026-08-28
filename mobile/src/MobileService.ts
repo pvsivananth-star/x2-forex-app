@@ -12,7 +12,11 @@ import {
     REFRESH_INTERVAL_SECONDS,
 } from './catalogs';
 
-import {fetchCryptoCatalog, fetchCryptoData, fetchFxData, fetchMetalsData,} from './ratesApi';
+import {
+    EQUITY_ORDER,
+} from './catalogs/equities';
+
+import {fetchCryptoCatalog, fetchCryptoData, fetchFxData, fetchMetalsData} from './ratesApi';
 
 import {DecimalPlaces, MarketAsset, PersistedSettings, TabCategory, Tenor, ThemePreference,} from './types';
 
@@ -45,7 +49,7 @@ export const TENOR_OPTIONS: Tenor[] = [
 
 const STORAGE_KEY = '@x2_mobile_settings_v5';
 
-type Category = 'fx' | 'crypto' | 'metals';
+type Category = 'fx' | 'equity' | 'crypto' | 'metals';
 
 type MarketSnapshot = {
     rate: number;
@@ -82,11 +86,15 @@ interface MobileServiceState {
 
     watchlistFx: string[];
 
+    watchlistEquity: string[];
+
     watchlistCrypto: string[];
 
     watchlistMetals: string[];
 
     editWatchlistFx: string[];
+
+    editWatchlistEquity: string[];
 
     editWatchlistCrypto: string[];
 
@@ -1677,12 +1685,14 @@ export const useMobileStore =
 
                     const [
                         fx,
+                        equity,
                         crypto,
                         metals,
                     ] = await Promise.all([
                         fetchFxData(
                             state.tenorFx,
                         ),
+                        fetchEquityData(),
 
                         fetchCryptoData(
                             state.tenorCrypto,
@@ -1844,6 +1854,11 @@ export const useMobileStore =
                     mergeCategory(
                         'fx',
                         fx,
+                    );
+
+                    mergeCategory(
+                        'equity',
+                        equity,
                     );
 
                     mergeCategory(

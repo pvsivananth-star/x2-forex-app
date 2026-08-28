@@ -1,5 +1,6 @@
 export type TabCategory =
     | 'fx'
+    | 'equity'
     | 'crypto'
     | 'metals'
     | 'portfolio';
@@ -21,6 +22,7 @@ export type ThemePreference =
 
 export type AssetCategory =
     | 'fx'
+    | 'equity'
     | 'crypto'
     | 'metals';
 
@@ -80,6 +82,7 @@ export interface PersistedSettings {
 
     watchlistFx: string[];
     watchlistCrypto: string[];
+    watchlistEquity: string[];
     watchlistMetals: string[];
 
     editedRates: Record<string, number>;

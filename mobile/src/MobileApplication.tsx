@@ -15,7 +15,11 @@ import {REFRESH_INTERVAL_SECONDS, TENOR_OPTIONS, useMobileStore,} from './Mobile
 
 import {MarketAsset, TabCategory,} from './types';
 
-import {CRYPTO_DEFAULT_CATALOG, FX_CATALOG, METAL_CATALOG,} from './catalogs';
+import {CRYPTO_DEFAULT_CATALOG, FX_CATALOG, METAL_CATALOG, DEFAULT_EQUITY} from './catalogs';
+
+import {
+    EQUITY_ORDER,
+} from './catalogs/equities';
 
 import {DARK_COLORS, LIGHT_COLORS,} from './theme';
 
@@ -36,6 +40,7 @@ const TAB_TITLES: Record<
     string
 > = {
     fx: 'Forex',
+    eq: 'Equities',
     crypto: 'Crypto',
     metals: 'Metals',
     portfolio: 'Portfolio',
@@ -174,6 +179,14 @@ export const MobileApplication: React.FC =
                 }
 
                 if (
+                    activeTab === 'equity'
+                ) {
+                    return isEditMode
+                        ? editWatchlistEquity
+                        : watchlistEquity;
+                }
+
+                if (
                     activeTab === 'crypto'
                 ) {
                     return isEditMode
@@ -210,6 +223,12 @@ export const MobileApplication: React.FC =
                         activeTab === 'fx'
                     ) {
                         return FX_CATALOG;
+                    }
+
+                    if (
+                        activeTab === 'equity'
+                    ) {
+                        return DEFAULT_EQUITY;
                     }
 
                     if (
