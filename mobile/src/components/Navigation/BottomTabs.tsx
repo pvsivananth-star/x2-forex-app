@@ -3,31 +3,32 @@ import {Pressable, Text, View} from 'react-native';
 import {TabCategory} from '../../models/market';
 import {styles} from './BottomTabs.styles';
 
-const TABS: { key: TabCategory; label: string; icon?: string }[] = [
-    { key: 'dashboard', label: 'Welcome', icon: '★' },
-    { key: 'fx', label: 'FX', icon: 'FX' },
-    { key: 'equity', label: 'EQ', icon: 'EQ' },
-    { key: 'crypto', label: '', icon: '₿' },
-    { key: 'metals', label: 'AU', icon: 'Au' },
-    { key: 'portfolio', label: '', icon: '📊' },
+const TABS: { key: TabCategory; icon: string }[] = [
+    { key: 'dashboard', icon: '★' },
+    { key: 'fx', icon: 'FX' },
+    { key: 'equity', icon: 'EQ' },
+    { key: 'crypto', icon: '₿' },
+    { key: 'metals', icon: 'Au' },
+    { key: 'portfolio', icon: '📊' },
 ];
 
 export function BottomTabs({activeTab, onChange}: { activeTab: TabCategory; onChange: (tab: TabCategory) => void }) {
     return (
         <View style={styles.root}>
-            {TABS.map((t) => (
-                <Pressable
-                    key={t.key}
-                    onPress={() => onChange(t.key)}
-                    accessibilityRole="tab"
-                    accessibilityState={{selected: activeTab === t.key}}
-                    style={styles.tab}
-                >
-                    <Text style={{fontWeight: activeTab === t.key ? '800' : '400'}}>{t.icon ?? t.label}</Text>
-                    {/* Show label only when provided (labels requested to be bottom-only) */}
-                    {t.label ? <Text style={styles.label}>{t.label}</Text> : null}
-                </Pressable>
-            ))}
+            {TABS.map((t) => {
+                const active = activeTab === t.key;
+                return (
+                    <Pressable
+                        key={t.key}
+                        onPress={() => onChange(t.key)}
+                        accessibilityRole="tab"
+                        accessibilityState={{selected: active}}
+                        style={styles.tab}
+                    >
+                        <Text style={active ? styles.iconActive : styles.iconInactive}>{t.icon}</Text>
+                    </Pressable>
+                );
+            })}
         </View>
     );
 }

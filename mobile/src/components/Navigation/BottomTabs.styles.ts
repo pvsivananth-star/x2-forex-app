@@ -18,8 +18,20 @@ export const styles = StyleSheet.create({
         paddingVertical: 4,
     },
 
-    label: {
-        fontSize: 10,
-        marginTop: 2,
+    icon: {
+        fontSize: 18,
+        fontWeight: '800',
+    },
+
+    iconActive: {
+        fontSize: 18,
+        fontWeight: '900',
+        color: '#000',
+    },
+
+    iconInactive: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: '#666',
     },
 });
