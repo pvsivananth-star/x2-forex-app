@@ -1,6 +1,9 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {create} from 'zustand';
 
+import {
+    getItem,
+    setItem,
+} from './services/persistence/storage';
 
 import {
     CRYPTO_DEFAULT_CATALOG,
@@ -898,9 +901,9 @@ async function persistState(
         persistedMarkets,
     };
 
-    await AsyncStorage.setItem(
+    await setItem(
         STORAGE_KEY,
-        JSON.stringify(settings),
+        settings,
     );
 }
 
@@ -2193,12 +2196,16 @@ export const useMobileStore =
             initialize:
                 async () => {
                     try {
-                        const raw =
-                            await AsyncStorage.getItem(
+                        const saved =
+                            await getItem<
+                                PersistedSettings & {
+                                marketState?: PersistedMarketState;
+                            }
+                            >(
                                 STORAGE_KEY,
                             );
 
-                        if (raw) {
+                        if (!saved) {
                             const saved =
                                 JSON.parse(
                                     raw,
