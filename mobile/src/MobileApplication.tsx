@@ -570,51 +570,23 @@ export const MobileApplication: React.FC =
                                 styles.headerActions
                             }
                         >
-                            {activeTab !==
-                                'portfolio' &&
-                                !isEditMode && (
+                            {activeTab !== 'portfolio' && activeTab !== 'equity' && !isEditMode && (
                                     <>
                                         <TouchableOpacity
-                                            onPress={
-                                                startEditing
-                                            }
-                                            style={
-                                                styles.headerButton
-                                            }
+                                            onPress={startEditing}
+                                            style={styles.headerButton}
                                             accessibilityLabel="Edit watchlist"
                                         >
-                                            <Text
-                                                style={[
-                                                    styles.headerButtonText,
-                                                    {
-                                                        color:
-                                                        colors.text,
-                                                    },
-                                                ]}
-                                            >
-                                                ✎
-                                            </Text>
+                                            <Text style={[styles.headerButtonText, {color: colors.text}]}>✎</Text>
                                         </TouchableOpacity>
 
                                         <RefreshTimer
-                                            countdown={
-                                                countdown
-                                            }
-                                            totalSeconds={
-                                                REFRESH_INTERVAL_SECONDS
-                                            }
-                                            color={
-                                                colors.accent
-                                            }
-                                            backgroundColor={
-                                                colors.border
-                                            }
-                                            disabled={
-                                                isLoading
-                                            }
-                                            onPress={() =>
-                                                void forceRefresh()
-                                            }
+                                            countdown={countdown}
+                                            totalSeconds={REFRESH_INTERVAL_SECONDS}
+                                            color={colors.accent}
+                                            backgroundColor={colors.border}
+                                            disabled={isLoading}
+                                            onPress={() => void forceRefresh()}
                                         />
                                     </>
                                 )}
