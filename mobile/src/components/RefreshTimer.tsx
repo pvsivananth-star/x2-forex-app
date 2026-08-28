@@ -1,7 +1,7 @@
 import React from 'react';
 
 import {TouchableOpacity, View,} from 'react-native';
-import {styles} from './RefreshTimer.styles';
+import {styles, ringStyle, segmentStyle, innerStyle} from './RefreshTimer.styles';
 
 interface RefreshTimerProps {
     countdown: number;
@@ -50,77 +50,17 @@ export const RefreshTimer: React.FC<
             accessibilityRole="button"
             disabled={disabled}
             onPress={onPress}
-            style={[
-                styles.button,
-                {
-                    opacity:
-                        disabled
-                            ? 0.45
-                            : 1,
-                },
-            ]}
+            style={[styles.button, {opacity: disabled ? 0.45 : 1}]}
         >
-            <View
-                style={[
-                    styles.ring,
-                    {
-                        borderColor:
-                        backgroundColor,
-                    },
-                ]}
-            >
-                {Array.from({
-                    length: SEGMENTS,
-                }).map(
-                    (_, index) => {
-                        const angle =
-                            (index /
-                                SEGMENTS) *
-                            360;
+            <View style={ringStyle(backgroundColor)}>
+                {Array.from({length: SEGMENTS}).map((_, index) => {
+                    const angle = (index / SEGMENTS) * 360;
+                    const active = index < filled;
 
-                        const active =
-                            index <
-                            filled;
+                    return <View key={index} style={segmentStyle(active, color, backgroundColor, angle)} />;
+                })}
 
-                        return (
-                            <View
-                                key={
-                                    index
-                                }
-                                style={[
-                                    styles.segment,
-                                    {
-                                        backgroundColor:
-                                            active
-                                                ? color
-                                                : backgroundColor,
-
-                                        transform: [
-                                            {
-                                                rotate:
-                                                    `${angle}deg`,
-                                            },
-                                            {
-                                                translateY:
-                                                    -10,
-                                            },
-                                        ],
-                                    },
-                                ]}
-                            />
-                        );
-                    },
-                )}
-
-                <View
-                    style={[
-                        styles.inner,
-                        {
-                            backgroundColor:
-                            backgroundColor,
-                        },
-                    ]}
-                />
+                <View style={innerStyle(backgroundColor)} />
             </View>
         </TouchableOpacity>
     );

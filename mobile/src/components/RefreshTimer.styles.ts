@@ -30,3 +30,22 @@ export const styles = StyleSheet.create({
         borderRadius: 9,
     },
 });
+
+export const ringStyle = (backgroundColor: string) => ({
+    ...styles.ring,
+    borderColor: backgroundColor,
+});
+
+export const segmentStyle = (active: boolean, color: string, backgroundColor: string, angle: number) => ({
+    ...styles.segment,
+    backgroundColor: active ? color : backgroundColor,
+    transform: [
+        {rotate: `${angle}deg`},
+        {translateY: -10},
+    ],
+});
+
+export const innerStyle = (backgroundColor: string) => ({
+    ...styles.inner,
+    backgroundColor,
+});
