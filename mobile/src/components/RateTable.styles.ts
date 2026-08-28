@@ -75,3 +75,34 @@ export const styles = StyleSheet.create({
         fontWeight: '700',
     },
 });
+
+export const headerStyles = (colors: any) => ({
+    header: {
+        ...styles.header,
+        borderBottomColor: colors.border,
+    },
+    assetHeader: styles.assetHeader,
+    rateHeader: styles.rateHeader,
+    changeHeader: styles.changeHeader,
+    headerText: (colors: any) => ({...styles.headerText, color: colors.dim}),
+});
+
+export const rowStyles = (colors: any, active: boolean, positive: boolean) => ({
+    row: {...styles.row, borderBottomColor: colors.border},
+    asset: styles.asset,
+    symbol: (colors: any) => ({...styles.symbol, color: colors.text}),
+    name: (colors: any) => ({...styles.name, color: colors.dim}),
+    rate: styles.rate,
+    input: (colors: any, isActive: boolean) => ({
+        ...styles.input,
+        color: colors.accent,
+        backgroundColor: colors.surface,
+        borderColor: isActive ? '#222' : colors.border,
+        borderWidth: isActive ? 1.5 : 1,
+    }),
+    change: styles.change,
+    changeText: (colors: any, positive: boolean) => ({
+        ...styles.changeText,
+        color: positive ? colors.green : colors.red,
+    }),
+});

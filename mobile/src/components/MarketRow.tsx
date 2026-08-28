@@ -1,7 +1,7 @@
 import React, {useEffect, useRef, useState,} from 'react';
 
 import {Text, TextInput, View,} from 'react-native';
-import {styles} from './MarketRow.styles';
+import {makeRowStyles} from './MarketRow.styles';
 
 import {MarketAsset,} from '../types';
 
@@ -34,143 +34,65 @@ export const MarketRow: React.FC<
          onActivate,
          onDeactivate,
      }) => {
-    const displaySymbol =
-        asset.displaySymbol ??
-        asset.symbol;
+    const displaySymbol = asset.displaySymbol ?? asset.symbol;
 
-    const formatted =
-        asset.rate.toFixed(
-            decimalPlaces,
-        );
+    const formatted = asset.rate.toFixed(decimalPlaces);
 
-    const [draft, setDraft] =
-        useState(formatted);
+    const [draft, setDraft] = useState(formatted);
 
-    const [focused, setFocused] =
-        useState(false);
+    const [focused, setFocused] = useState(false);
 
-    const lastCommittedRate =
-        useRef(asset.rate);
+    const lastCommittedRate = useRef(asset.rate);
 
     useEffect(() => {
         if (!focused) {
-            const next =
-                asset.rate.toFixed(
-                    decimalPlaces,
-                );
+            const next = asset.rate.toFixed(decimalPlaces);
 
-            if (
-                next !== draft
-            ) {
+            if (next !== draft) {
                 setDraft(next);
             }
 
-            lastCommittedRate.current =
-                asset.rate;
+            lastCommittedRate.current = asset.rate;
         }
-    }, [
-        asset.rate,
-        decimalPlaces,
-        focused,
-    ]);
-    
-    const commit = (
-        value: string,
-    ) => {
-        const trimmed =
-            value.trim();
+    }, [asset.rate, decimalPlaces, focused]);
 
-        const parsed =
-            Number(trimmed);
+    const commit = (value: string) => {
+        const trimmed = value.trim();
 
-        if (
-            !trimmed ||
-            !Number.isFinite(parsed) ||
-            parsed <= 0
-        ) {
+        const parsed = Number(trimmed);
+
+        if (!trimmed || !Number.isFinite(parsed) || parsed <= 0) {
             setDraft(formatted);
             return;
         }
 
-        onCommit(
-            asset.symbol,
-            trimmed,
-        );
+        onCommit(asset.symbol, trimmed);
 
-        lastCommittedRate.current =
-            parsed;
+        lastCommittedRate.current = parsed;
 
-        setDraft(
-            parsed.toFixed(
-                decimalPlaces,
-            ),
-        );
+        setDraft(parsed.toFixed(decimalPlaces));
     };
 
-    const positive =
-        asset.changePct >= 0;
+    const positive = asset.changePct >= 0;
+
+    const s = makeRowStyles(colors, active, asset.category === 'equity', positive);
 
     return (
-        <View
-            style={[
-                styles.row,
-                {
-                    borderBottomColor:
-                    colors.border,
-                },
-            ]}
-        >
-            <View
-                style={
-                    styles.assetColumn
-                }
-            >
-                <Text
-                    style={[
-                        styles.symbol,
-                        {
-                            color:
-                            colors.text,
-                        },
-                    ]}
-                    numberOfLines={1}
-                >
+        <View style={s.row}>
+            <View style={s.assetColumn}>
+                <Text style={s.symbol} numberOfLines={1}>
                     {displaySymbol}
                 </Text>
 
-                <Text
-                    style={[
-                        styles.name,
-                        {
-                            color:
-                            colors.dim,
-                        },
-                    ]}
-                    numberOfLines={1}
-                >
+                <Text style={s.name} numberOfLines={1}>
                     {asset.name}
                 </Text>
             </View>
 
-            <View
-                style={
-                    styles.rateColumn
-                }
-            >
+            <View style={s.rateColumn}>
                 {asset.category === 'equity' ? (
                     // Render a non-editable label for equity rates
-                    <Text
-                        style={[
-                            styles.input,
-                            {
-                                color: colors.text,
-                                backgroundColor: 'transparent',
-                                borderWidth: 0,
-                                textAlign: 'right',
-                            },
-                        ]}
-                        accessibilityLabel={`Rate for ${displaySymbol}`}
-                    >
+                    <Text style={s.input} accessibilityLabel={`Rate for ${displaySymbol}`}>
                         {formatted}
                     </Text>
                 ) : (
@@ -180,9 +102,7 @@ export const MarketRow: React.FC<
                             setFocused(true);
                             onActivate?.();
                         }}
-                        onChangeText={
-                            setDraft
-                        }
+                        onChangeText={setDraft}
                         onBlur={() => {
                             // Do not commit on blur — only commit on explicit submit (enter/tab).
                             setFocused(false);
@@ -197,53 +117,16 @@ export const MarketRow: React.FC<
                         selectTextOnFocus
                         keyboardType="decimal-pad"
                         returnKeyType="done"
-                        style={[
-                            styles.input,
-                            {
-                                color:
-                                colors.text,
-
-                                backgroundColor:
-                                colors.surface,
-
-                                // Show dark border only when the parent marks this row active.
-                                // Avoid relying on local focus state for visuals so the parent-controlled
-                                // active indicator updates immediately when focus moves.
-                                borderColor: active ? '#222' : colors.border,
-
-                                borderWidth: active ? 1.5 : 1,
-                            },
-                        ]}
-                        accessibilityLabel={
-                            `Rate for ${displaySymbol}`
-                        }
+                        style={s.input}
+                        accessibilityLabel={`Rate for ${displaySymbol}`}
                     />
                 )}
             </View>
 
-            <View
-                style={
-                    styles.changeColumn
-                }
-            >
-                <Text
-                    style={[
-                        styles.change,
-                        {
-                            color:
-                                positive
-                                    ? colors.positive
-                                    : colors.negative,
-                        },
-                    ]}
-                >
-                    {positive
-                        ? '+'
-                        : ''}
-                    {asset.changePct.toFixed(
-                        2,
-                    )}
-                    %
+            <View style={s.changeColumn}>
+                <Text style={s.changeText}>
+                    {positive ? '+' : ''}
+                    {asset.changePct.toFixed(2)}%
                 </Text>
             </View>
         </View>

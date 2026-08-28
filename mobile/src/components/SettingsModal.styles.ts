@@ -90,3 +90,26 @@ export const styles = StyleSheet.create({
         fontWeight: '900',
     },
 });
+
+export const themed = (colors: any) => ({
+    backdrop: {...styles.backdrop, backgroundColor: colors.overlay},
+    modal: {...styles.modal, backgroundColor: colors.surfaceElevated, borderColor: colors.border},
+    header: styles.header,
+    title: {...styles.title, color: colors.text},
+    close: {...styles.close, color: colors.muted},
+    section: {...styles.section, color: colors.muted},
+    options: styles.options,
+    option: (selected: boolean, colors: any) => ({
+        ...styles.option,
+        backgroundColor: selected ? colors.accentStrong : colors.surface,
+        borderColor: selected ? colors.accent : colors.border,
+    }),
+    optionText: (selected: boolean, colors: any) => ({
+        color: selected ? '#FFFFFF' : colors.muted,
+        fontWeight: '800',
+    }),
+    info: (colors: any) => ({...styles.info, color: colors.muted}),
+    reset: (colors: any) => ({...styles.reset, backgroundColor: colors.surface, borderColor: colors.warning}),
+    resetText: (colors: any) => ({...styles.resetText, color: colors.warning}),
+    disclaimer: (colors: any) => ({...styles.disclaimer, color: colors.warning, borderColor: colors.border, backgroundColor: colors.surface}),
+});

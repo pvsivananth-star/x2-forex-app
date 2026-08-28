@@ -1,7 +1,7 @@
 import React from 'react';
 
 import {Text, TouchableOpacity, View,} from 'react-native';
-import {styles} from './EditRow.styles';
+import {styles, rowContainer, arrowColor, removeButton, removeText} from './EditRow.styles';
 
 import {MarketAsset,} from '../types';
 
@@ -49,16 +49,7 @@ export const EditRow: React.FC<
 
     return (
         <View
-            style={[
-                styles.row,
-                {
-                    backgroundColor:
-                    colors.surface,
-
-                    borderBottomColor:
-                    colors.border,
-                },
-            ]}
+            style={rowContainer(colors)}
         >
             <View
                 style={styles.arrows}
@@ -78,15 +69,7 @@ export const EditRow: React.FC<
                     }
                 >
                     <Text
-                        style={[
-                            styles.arrow,
-                            {
-                                color:
-                                    canMoveUp
-                                        ? colors.text
-                                        : colors.border,
-                            },
-                        ]}
+                        style={arrowColor(canMoveUp, colors)}
                     >
                         ↑
                     </Text>
@@ -107,15 +90,7 @@ export const EditRow: React.FC<
                     }
                 >
                     <Text
-                        style={[
-                            styles.arrow,
-                            {
-                                color:
-                                    canMoveDown
-                                        ? colors.text
-                                        : colors.border,
-                            },
-                        ]}
+                        style={arrowColor(canMoveDown, colors)}
                     >
                         ↓
                     </Text>
@@ -159,28 +134,14 @@ export const EditRow: React.FC<
                         asset.symbol,
                     )
                 }
-                style={[
-                    styles.remove,
-                    {
-                        opacity:
-                            locked
-                                ? 0.25
-                                : 1,
-                    },
-                ]}
+                style={removeButton(locked)}
                 accessibilityRole="button"
                 accessibilityLabel={
                     `Remove ${displaySymbol}`
                 }
             >
                 <Text
-                    style={[
-                        styles.removeText,
-                        {
-                            color:
-                            colors.negative,
-                        },
-                    ]}
+                    style={removeText(colors)}
                 >
                     −
                 </Text>

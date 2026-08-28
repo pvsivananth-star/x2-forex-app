@@ -1,7 +1,7 @@
 import React from 'react';
 
 import {Text, TouchableOpacity, View,} from 'react-native';
-import {styles} from './BottomTabs.styles';
+import {styles, themed} from './BottomTabs.styles';
 
 import {TabCategory,} from '../types';
 
@@ -53,91 +53,31 @@ export const BottomTabs: React.FC<
          activeTab,
          colors,
          onChange,
-     }) => (
-    <View
-        style={[
-            styles.container,
-            {
-                backgroundColor:
-                colors.surface,
+     }) => {
+    const s = themed(colors);
 
-                borderTopColor:
-                colors.border,
-            },
-        ]}
-    >
-        {TABS.map(
-            (tab) => {
-                const active =
-                    activeTab ===
-                    tab.key;
+    return (
+        <View style={s.container}>
+            {TABS.map((tab) => {
+                const active = activeTab === tab.key;
 
                 return (
                     <TouchableOpacity
-                        key={
-                            tab.key
-                        }
+                        key={tab.key}
                         accessibilityRole="tab"
-                        accessibilityState={{
-                            selected:
-                            active,
-                        }}
-                        onPress={() =>
-                            onChange(
-                                tab.key,
-                            )
-                        }
-                        style={
-                            styles.tab
-                        }
+                        accessibilityState={{selected: active}}
+                        onPress={() => onChange(tab.key)}
+                        style={s.tab}
                     >
-                        <View
-                            style={[
-                                styles.iconContainer,
-                                {
-                                    backgroundColor:
-                                        active
-                                            ? colors.accentStrong
-                                            : 'transparent',
-                                },
-                            ]}
-                        >
-                            <Text
-                                style={[
-                                    styles.icon,
-                                    {
-                                        color:
-                                            active
-                                                ? '#FFFFFF'
-                                                : colors.muted,
-                                    },
-                                ]}
-                            >
-                                {
-                                    tab.icon
-                                }
-                            </Text>
+                        <View style={active ? {...s.iconContainer, backgroundColor: colors.accentStrong} : s.iconContainer}>
+                            <Text style={active ? s.iconActive : s.iconInactive(colors)}>{tab.icon}</Text>
                         </View>
 
-                        <Text
-                            style={[
-                                styles.label,
-                                {
-                                    color:
-                                        active
-                                            ? colors.accent
-                                            : colors.muted,
-                                },
-                            ]}
-                        >
-                            {
-                                tab.label
-                            }
-                        </Text>
+                        <Text style={active ? s.labelActive(colors) : s.labelInactive(colors)}>{tab.label}</Text>
                     </TouchableOpacity>
                 );
-            },
-        )}
-    </View>
-);
+            })}
+        </View>
+    );
+};
 

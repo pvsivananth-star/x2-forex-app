@@ -99,3 +99,22 @@ export const styles = StyleSheet.create({
         borderRadius: 8,
     },
 });
+
+export const themed = (colors: any) => ({
+    backdrop: {...styles.backdrop, backgroundColor: colors.overlay},
+    modal: {...styles.modal, backgroundColor: colors.surfaceElevated, borderColor: colors.border},
+    header: styles.header,
+    headerText: styles.headerText,
+    title: {...styles.title, color: colors.text},
+    count: {...styles.count, color: colors.dim},
+    close: {...styles.close, color: colors.muted},
+    search: (colors: any) => ({...styles.search, color: colors.text, backgroundColor: colors.surface, borderColor: colors.border}),
+    results: styles.results,
+    result: (colors: any, disabled: boolean) => ({...styles.result, borderBottomColor: colors.border, opacity: disabled ? 0.4 : 1}),
+    resultText: styles.resultText,
+    symbol: (colors: any) => ({...styles.symbol, color: colors.text}),
+    name: (colors: any) => ({...styles.name, color: colors.muted}),
+    added: (colors: any) => ({...styles.added, color: colors.positive}),
+    empty: (colors: any) => ({...styles.empty, color: colors.muted}),
+    cancel: (colors: any) => ({...styles.cancel, borderColor: colors.border}),
+});

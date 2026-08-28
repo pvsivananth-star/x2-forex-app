@@ -7,3 +7,8 @@ export const styles = StyleSheet.create({
         borderRadius: 6,
     },
 });
+
+export const dotStyle = (online: boolean) => ({
+    ...styles.dot,
+    backgroundColor: online ? '#2E9D57' : '#D32F2F',
+});

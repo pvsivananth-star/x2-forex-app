@@ -34,3 +34,37 @@ export const styles = StyleSheet.create({
         marginTop: 2,
     },
 });
+
+export const themed = (colors: any) => ({
+    container: {
+        ...styles.container,
+        backgroundColor: colors.surface,
+        borderTopColor: colors.border,
+    },
+
+    tab: styles.tab,
+
+    iconContainer: styles.iconContainer,
+
+    iconActive: {
+        ...styles.icon,
+        color: '#FFFFFF',
+    },
+
+    iconInactive: (colors: any) => ({
+        ...styles.icon,
+        color: colors.muted,
+    }),
+
+    labelActive: (colors: any) => ({
+        ...styles.label,
+        color: colors.accent,
+        fontWeight: '800',
+    }),
+
+    labelInactive: (colors: any) => ({
+        ...styles.label,
+        color: colors.muted,
+        fontWeight: '400',
+    }),
+});

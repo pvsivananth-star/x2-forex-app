@@ -56,3 +56,24 @@ export const styles = StyleSheet.create({
         fontWeight: '400',
     },
 });
+
+export const rowContainer = (colors: any) => ({
+    ...styles.row,
+    backgroundColor: colors.surface,
+    borderBottomColor: colors.border,
+});
+
+export const arrowColor = (enabled: boolean, colors: any) => ({
+    ...styles.arrow,
+    color: enabled ? colors.text : colors.border,
+});
+
+export const removeButton = (locked: boolean) => ({
+    ...styles.remove,
+    opacity: locked ? 0.25 : 1,
+});
+
+export const removeText = (colors: any) => ({
+    ...styles.removeText,
+    color: colors.negative,
+});

@@ -1,7 +1,7 @@
 import React, {useEffect, useRef, useState,} from 'react';
 
 import {Text, TextInput, TouchableOpacity, View,} from 'react-native';
-import {styles} from './RateTable.styles';
+import {styles, headerStyles, rowStyles} from './RateTable.styles';
 
 import {MarketAsset, TabCategory, Tenor,} from '../MobileService';
 
@@ -202,6 +202,7 @@ export const RateTable: React.FC<
          onTenorPress,
      }) => {
     const [focusedSymbol, setFocusedSymbol] = useState<string | null>(null);
+    const h = headerStyles(colors);
     /*
      * Non-editing values use comma separators.
      *
@@ -222,38 +223,10 @@ export const RateTable: React.FC<
 
     return (
         <View>
-            <View
-                style={[
-                    styles.header,
-                    {
-                        borderBottomColor:
-                        colors.border,
-                    },
-                ]}
-            >
-                <Text
-                    style={[
-                        styles.assetHeader,
-                        {
-                            color:
-                            colors.dim,
-                        },
-                    ]}
-                >
-                    Asset
-                </Text>
+            <View style={h.header}>
+                <Text style={h.assetHeader}>Asset</Text>
 
-                <Text
-                    style={[
-                        styles.rateHeader,
-                        {
-                            color:
-                            colors.dim,
-                        },
-                    ]}
-                >
-                    Rate
-                </Text>
+                <Text style={h.rateHeader}>Rate</Text>
 
                 <TouchableOpacity
                     style={
@@ -263,17 +236,7 @@ export const RateTable: React.FC<
                         onTenorPress
                     }
                 >
-                    <Text
-                        style={[
-                            styles.headerText,
-                            {
-                                color:
-                                colors.dim,
-                            },
-                        ]}
-                    >
-                        % {tenor} ▾
-                    </Text>
+                    <Text style={h.headerText(colors)}>% {tenor} ▾</Text>
                 </TouchableOpacity>
             </View>
 
@@ -318,15 +281,7 @@ export const RateTable: React.FC<
                                     styles.asset
                                 }
                             >
-                                <Text
-                                    style={[
-                                        styles.symbol,
-                                        {
-                                            color:
-                                            colors.text,
-                                        },
-                                    ]}
-                                >
+                                <Text style={r.symbol(colors)}>
                                     {
                                         category ===
                                         'crypto' &&
@@ -341,25 +296,14 @@ export const RateTable: React.FC<
                                     numberOfLines={
                                         1
                                     }
-                                    style={[
-                                        styles.name,
-                                        {
-                                            color:
-                                            colors.dim,
-                                        },
-                                    ]}
-                                >
+                                    style={r.name(colors)}>
                                     {
                                         asset.name
                                     }
                                 </Text>
                             </View>
 
-                            <View
-                                style={
-                                    styles.rate
-                                }
-                            >
+                            <View style={r.rate}>
                                 <RateInput
                                     symbol={symbol}
                                     value={value}
@@ -374,31 +318,9 @@ export const RateTable: React.FC<
                                 />
                             </View>
 
-                            <View
-                                style={
-                                    styles.change
-                                }
-                            >
-                                <Text
-                                    style={[
-                                        styles.changeText,
-                                        {
-                                            color:
-                                                asset.changePct >=
-                                                0
-                                                    ? colors.green
-                                                    : colors.red,
-                                        },
-                                    ]}
-                                >
-                                    {asset.changePct >=
-                                    0
-                                        ? '+'
-                                        : ''}
-                                    {asset.changePct.toFixed(
-                                        2,
-                                    )}
-                                    %
+                            <View style={r.change}>
+                                <Text style={r.changeText(colors, asset.changePct >= 0)}>
+                                    {asset.changePct >= 0 ? '+' : ''}{asset.changePct.toFixed(2)}%
                                 </Text>
                             </View>
                         </View>

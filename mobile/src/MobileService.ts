@@ -566,12 +566,9 @@ function calculateCryptoAnchor(
                     return;
                 }
 
-                const rate =
-                    value / snapshot.rate;
+                const rate = Number.isFinite(snapshot.rate) && snapshot.rate !== 0 ? value / snapshot.rate : 0;
 
-                const referenceRate =
-                    value /
-                    snapshot.referenceRate;
+                const referenceRate = Number.isFinite(snapshot.referenceRate) && snapshot.referenceRate !== 0 ? value / snapshot.referenceRate : 0;
 
                 assets[itemSymbol] = {
                     ...original,
@@ -638,13 +635,9 @@ function calculateCryptoAnchor(
                     return;
                 }
 
-                const rate =
-                    anchorUsd /
-                    snapshot.rate;
+                const rate = Number.isFinite(snapshot.rate) && snapshot.rate !== 0 ? anchorUsd / snapshot.rate : 0;
 
-                const referenceRate =
-                    anchorReferenceUsd /
-                    snapshot.referenceRate;
+                const referenceRate = Number.isFinite(snapshot.referenceRate) && snapshot.referenceRate !== 0 ? anchorReferenceUsd / snapshot.referenceRate : 0;
 
                 assets[itemSymbol] = {
                     ...original,
@@ -1439,6 +1432,9 @@ export const useMobileStore =
                             ),
                         ],
                     });
+
+                    // Fetch latest crypto rates so the new coin doesn't show zeros
+                    void get().forceRefresh();
 
                     return;
                 }
