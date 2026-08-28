@@ -1616,6 +1616,11 @@ export const useMobileStore =
 
                     tenorMetals: '1M',
 
+                    // Reset theme and decimal places to app defaults
+                    theme: 'system',
+
+                    decimalPlaces: 4,
+
                     // Exit edit mode so UI shows the active watchlists
                     isEditMode: false,
                 });

@@ -239,7 +239,7 @@ export const SettingsModal: React.FC<
                             },
                         ]}
                     >
-                        Reset Market Settings
+                        Reset App Settings
                     </Text>
 
                     <Text
@@ -251,9 +251,7 @@ export const SettingsModal: React.FC<
                             },
                         ]}
                     >
-                        Reset FX, Crypto and Metals
-                        watchlists and rate anchors
-                        to their default settings.
+                        Caution: Application will reset to system defaults. Your local changes will be overriden.
                     </Text>
 
                     <TouchableOpacity
@@ -277,7 +275,7 @@ export const SettingsModal: React.FC<
                                 },
                             ]}
                         >
-                            Reset Market Defaults
+                            Apply Default Settings
                         </Text>
                     </TouchableOpacity>
 
@@ -310,33 +308,6 @@ export const SettingsModal: React.FC<
 
                     <Text
                         style={[
-                            styles.section,
-                            {
-                                color:
-                                colors.muted,
-                            },
-                        ]}
-                    >
-                        FX
-                    </Text>
-
-                    <Text
-                        style={[
-                            styles.info,
-                            {
-                                color:
-                                colors.muted,
-                            },
-                        ]}
-                    >
-                        USD is always the first
-                        currency. Currencies can be
-                        added, removed and reordered
-                        from the FX edit screen.
-                    </Text>
-
-                    <Text
-                        style={[
                             styles.disclaimer,
                             {
                                 color:
@@ -361,20 +332,6 @@ export const SettingsModal: React.FC<
                         provided herein.
                     </Text>
 
-                    <TouchableOpacity
-                        onPress={onClose}
-                        style={[
-                            styles.done,
-                            {
-                                backgroundColor:
-                                colors.accentStrong,
-                            },
-                        ]}
-                    >
-                        <Text style={styles.doneText}>
-                            Done
-                        </Text>
-                    </TouchableOpacity>
                 </View>
             </View>
         </Modal>
