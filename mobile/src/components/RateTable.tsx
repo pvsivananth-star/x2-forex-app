@@ -3,7 +3,7 @@ import React, {useEffect, useRef, useState,} from 'react';
 import {Text, TextInput, TouchableOpacity, View,} from 'react-native';
 import {styles, headerStyles, rowStyles} from './RateTable.styles';
 
-import {MarketAsset, TabCategory, Tenor,} from '../MobileService';
+import {MarketAsset, TabCategory, Tenor,} from '../models';
 
 interface RateTableProps {
     colors: any;
