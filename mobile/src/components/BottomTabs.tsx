@@ -1,19 +1,10 @@
 import React from 'react';
 
-import {
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import {StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
 
-import {
-    TabCategory,
-} from '../types';
+import {TabCategory,} from '../types';
 
-import {
-    AppColors,
-} from '../theme';
+import {AppColors,} from '../theme';
 
 interface BottomTabsProps {
     activeTab: TabCategory;

@@ -1,22 +1,8 @@
-import React, {
-    useEffect,
-    useRef,
-    useState,
-} from 'react';
+import React, {useEffect, useRef, useState,} from 'react';
 
-import {
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import {StyleSheet, Text, TextInput, TouchableOpacity, View,} from 'react-native';
 
-import {
-    MarketAsset,
-    TabCategory,
-    Tenor,
-} from '../MobileService';
+import {MarketAsset, TabCategory, Tenor,} from '../MobileService';
 
 interface RateTableProps {
     colors: any;
@@ -214,7 +200,7 @@ export const RateTable: React.FC<
          onSubmitRate,
          onTenorPress,
      }) => {
-         const [focusedSymbol, setFocusedSymbol] = useState<string | null>(null);
+    const [focusedSymbol, setFocusedSymbol] = useState<string | null>(null);
     /*
      * Non-editing values use comma separators.
      *
@@ -484,7 +470,7 @@ const styles =
             alignItems:
                 'flex-end',
         },
-
+        
         input: {
             minWidth: 105,
             height: 38,

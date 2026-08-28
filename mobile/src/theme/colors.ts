@@ -1,1 +1,15 @@
-export const colors={background:'#FFFFFF',surface:'#FFFFFF',surfaceElevated:'#F7F7F7',border:'#E2E2E2',text:'#111111',muted:'#666666',dim:'#999999',accent:'#D77A00',accentStrong:'#B96300',positive:'#2E9D57',negative:'#D32F2F',warning:'#D77A00'} as const;
+export const colors = {
+    background: '#FFFFFF',
+    surface: '#FFFFFF',
+    surfaceElevated: '#F7F7F7',
+    border: '#E2E2E2',
+    text: '#111111',
+    muted: '#666666',
+    dim: '#999999',
+    accent: '#D77A00',
+    accentStrong: '#B96300',
+    positive: '#2E9D57',
+    negative: '#D32F2F',
+    warning: '#D77A00'
+} as const;
+

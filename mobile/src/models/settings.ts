@@ -4,8 +4,8 @@ export type DecimalPlaces = 2 | 3 | 4;
 export type ThemePreference = 'system' | 'light' | 'dark';
 
 export interface Settings {
-  activeTab: TabCategory;
-  tenor: Tenor;
-  decimalPlaces: DecimalPlaces;
-  theme: ThemePreference;
+    activeTab: TabCategory;
+    tenor: Tenor;
+    decimalPlaces: DecimalPlaces;
+    theme: ThemePreference;
 }

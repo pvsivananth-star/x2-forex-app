@@ -1,31 +1,20 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { create } from 'zustand';
+import {create} from 'zustand';
+
 
 import {
+    CRYPTO_DEFAULT_CATALOG,
     DEFAULT_CRYPTO,
     DEFAULT_FX,
     DEFAULT_METALS,
     FX_CATALOG,
     METAL_CATALOG,
-    CRYPTO_DEFAULT_CATALOG,
     REFRESH_INTERVAL_SECONDS,
 } from './catalogs';
 
-import {
-    fetchCryptoCatalog,
-    fetchCryptoData,
-    fetchFxData,
-    fetchMetalsData,
-} from './ratesApi';
+import {fetchCryptoCatalog, fetchCryptoData, fetchFxData, fetchMetalsData,} from './ratesApi';
 
-import {
-    DecimalPlaces,
-    MarketAsset,
-    PersistedSettings,
-    TabCategory,
-    Tenor,
-    ThemePreference,
-} from './types';
+import {DecimalPlaces, MarketAsset, PersistedSettings, TabCategory, Tenor, ThemePreference,} from './types';
 
 export type {
     DecimalPlaces,
@@ -149,6 +138,8 @@ interface MobileServiceState {
 
     cancelEditing: () => void;
 
+    resetMarketDefaults: () => Promise<void>;
+
     reorderWatchlist: (
         category: TabCategory,
         order: string[],
@@ -175,6 +166,7 @@ interface MobileServiceState {
 
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
+
 /* -------------------------------------------------------------------------- */
 
 function categoryForTab(
@@ -221,7 +213,7 @@ function cloneAssets(
     return Object.fromEntries(
         assets.map(asset => [
             asset.symbol,
-            { ...asset },
+            {...asset},
         ]),
     );
 }
@@ -264,7 +256,17 @@ function createCategoryState(
         category === 'fx'
             ? FX_CATALOG
             : category === 'metals'
-                ? METAL_CATALOG
+                ? [
+                    {
+                        symbol: 'USD',
+                        name: 'US Dollar',
+                        rate: 1,
+                        referenceRate: 1,
+                        changePct: 0,
+                        category: 'metals' as const,
+                    },
+                    ...METAL_CATALOG,
+                ]
                 : createCryptoAssets();
 
     return {
@@ -649,7 +651,10 @@ function calculateAnchor(
     symbol: string,
     value: number,
 ): CategoryState {
-    if (category === 'crypto') {
+    if (
+        category === 'crypto' ||
+        category === 'metals'
+    ) {
         return calculateCryptoAnchor(
             state,
             symbol,
@@ -666,6 +671,7 @@ function calculateAnchor(
 
 /* -------------------------------------------------------------------------- */
 /* Display materialization                                                    */
+
 /* -------------------------------------------------------------------------- */
 
 function materializeCategory(
@@ -810,6 +816,7 @@ async function persistState(
 
 /* -------------------------------------------------------------------------- */
 /* Watchlists                                                                 */
+
 /* -------------------------------------------------------------------------- */
 
 function getWatchlist(
@@ -1178,7 +1185,10 @@ export const useMobileStore =
                 ];
 
                 const metals = [
-                    ...state.editWatchlistMetals,
+                    'USD',
+                    ...state.editWatchlistMetals.filter(
+                        symbol => symbol !== 'USD',
+                    ),
                 ];
 
                 set({
@@ -1254,8 +1264,13 @@ export const useMobileStore =
                     category === 'metals'
                 ) {
                     set({
-                        editWatchlistMetals:
-                            [...order],
+                        editWatchlistMetals: [
+                            'USD',
+                            ...order.filter(
+                                symbol =>
+                                    symbol !== 'USD',
+                            ),
+                        ],
                     });
                 }
             },
@@ -1314,10 +1329,25 @@ export const useMobileStore =
                     return;
                 }
 
-                set({
-                    editWatchlistMetals:
-                    next,
-                });
+                if (
+                    category === 'metals'
+                ) {
+                    set({
+                        editWatchlistMetals: [
+                            'USD',
+                            ...next.filter(
+                                item =>
+                                    item !== 'USD',
+                            ),
+                        ],
+                    });
+
+                    return;
+                }
+                // set({
+                //     editWatchlistMetals:
+                //     next,
+                // });
             },
 
             removeAssetFromWatchlist: (
@@ -1331,7 +1361,8 @@ export const useMobileStore =
                 if (
                     (
                         category === 'fx' ||
-                        category === 'crypto'
+                        category === 'crypto' ||
+                        category === 'metals'
                     ) &&
                     symbol === 'USD'
                 ) {
@@ -1464,6 +1495,145 @@ export const useMobileStore =
                 );
             },
 
+            resetMarketDefaults: async () => {
+                /*
+                 * Reset ONLY FX, Crypto and Metals.
+                 * Theme, decimal places, tenor and active tab
+                 * are intentionally preserved.
+                 */
+
+                fxState =
+                    createCategoryState('fx');
+
+                cryptoState =
+                    createCategoryState('crypto');
+
+                metalsState =
+                    createCategoryState('metals');
+
+                /*
+                 * Metals:
+                 * USD is permanently first.
+                 * XAU_1OZ is the default anchor at 1.
+                 */
+                const metalAssets = {
+                    USD: {
+                        symbol: 'USD',
+                        name: 'US Dollar',
+                        rate: 1,
+                        referenceRate: 1,
+                        changePct: 0,
+                        category: 'metals' as const,
+                    },
+
+                    ...metalsState.assets,
+                };
+
+                const metalMarketRates = {
+                    USD: {
+                        rate: 1,
+                        referenceRate: 1,
+                    },
+
+                    ...metalsState.marketRates,
+                };
+
+                metalsState = {
+                    ...metalsState,
+
+                    assets: metalAssets,
+
+                    marketRates:
+                    metalMarketRates,
+
+                    editedSymbol:
+                        'XAU_1OZ',
+
+                    editedValue: 1,
+                };
+
+                /*
+                 * Reset watchlists.
+                 * USD is permanently first in FX and Crypto.
+                 * USD is also first in Metals.
+                 */
+                const fx = [
+                    'USD',
+                    ...DEFAULT_FX.filter(
+                        symbol =>
+                            symbol !== 'USD',
+                    ),
+                ];
+
+                const crypto = [
+                    'USD',
+                    ...DEFAULT_CRYPTO.filter(
+                        symbol =>
+                            symbol !== 'USD',
+                    ),
+                ];
+
+                const metals = [
+                    'USD',
+                    ...DEFAULT_METALS.filter(
+                        symbol =>
+                            symbol !== 'USD',
+                    ),
+                ];
+
+                set({
+                    watchlistFx: fx,
+
+                    watchlistCrypto:
+                    crypto,
+
+                    watchlistMetals:
+                    metals,
+
+                    editWatchlistFx: [
+                        ...fx,
+                    ],
+
+                    editWatchlistCrypto: [
+                        ...crypto,
+                    ],
+
+                    editWatchlistMetals: [
+                        ...metals,
+                    ],
+                });
+
+                /*
+                 * Apply the default XAU anchor from the
+                 * fresh market snapshot.
+                 */
+                metalsState =
+                    calculateFiatOrMetalAnchor(
+                        metalsState,
+                        'XAU_1OZ',
+                        1,
+                    );
+
+                setCategoryState(
+                    'metals',
+                    metalsState,
+                );
+
+                /*
+                 * Refresh the currently displayed category.
+                 */
+                const state = get();
+
+                set({
+                    ...materializeActiveCategory(
+                        state,
+                    ),
+                });
+
+                await persistState(
+                    get(),
+                );
+            },
             /* ------------------------------------------------------------------ */
             /* Refresh                                                             */
             /* ------------------------------------------------------------------ */
@@ -2114,6 +2284,38 @@ export const useMobileStore =
 
                         setCategoryState(
                             'crypto',
+                            next,
+                        );
+                    }
+
+                    /*
+                     * Metals default:
+                     *
+                     * XAU_1OZ = 1
+                     *
+                     * This makes gold the default anchor and
+                     * expresses USD and all other metals relative
+                     * to one troy ounce of gold.
+                     */
+                    const metals =
+                        getCategoryState(
+                            'metals',
+                        );
+
+                    if (
+                        !metals.editedSymbol &&
+                        metals.marketRates.XAU_1OZ &&
+                        metals.marketRates.XAU_1OZ.rate > 0
+                    ) {
+                        const next =
+                            calculateCryptoAnchor(
+                                metals,
+                                'XAU_1OZ',
+                                1,
+                            );
+
+                        setCategoryState(
+                            'metals',
                             next,
                         );
                     }

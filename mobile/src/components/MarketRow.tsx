@@ -1,23 +1,10 @@
-import React, {
-    useEffect,
-    useRef,
-    useState,
-} from 'react';
+import React, {useEffect, useRef, useState,} from 'react';
 
-import {
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
-} from 'react-native';
+import {StyleSheet, Text, TextInput, View,} from 'react-native';
 
-import {
-    MarketAsset,
-} from '../types';
+import {MarketAsset,} from '../types';
 
-import {
-    AppColors,
-} from '../theme';
+import {AppColors,} from '../theme';
 
 interface MarketRowProps {
     asset: MarketAsset;
@@ -85,7 +72,7 @@ export const MarketRow: React.FC<
         decimalPlaces,
         focused,
     ]);
-
+    
     const commit = (
         value: string,
     ) => {

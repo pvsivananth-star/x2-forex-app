@@ -1,9 +1,14 @@
 import React, {useState} from 'react';
-import { FlatList } from 'react-native';
-import { MarketRate } from '../../models/market';
-import { MarketRow } from './MarketRow';
+import {FlatList} from 'react-native';
+import {MarketRate} from '../../models/market';
+import {MarketRow} from './MarketRow';
 
-export function MarketList({data,editable=false,onRateChange,activeSymbol}:{data:MarketRate[];editable?:boolean;onRateChange?:(symbol:string,value:number)=>void;activeSymbol?:string|null}){
+export function MarketList({data, editable = false, onRateChange, activeSymbol}: {
+    data: MarketRate[];
+    editable?: boolean;
+    onRateChange?: (symbol: string, value: number) => void;
+    activeSymbol?: string | null
+}) {
     const [focusedSymbol, setFocusedSymbol] = useState<string | null>(null);
 
     return (

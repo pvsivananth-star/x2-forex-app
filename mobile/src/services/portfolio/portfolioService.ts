@@ -1,14 +1,14 @@
-import { PortfolioPosition } from '../../models/portfolio';
-import { getSecure, setSecure } from '../persistence';
+import {PortfolioPosition} from '../../models/portfolio';
+import {getSecure, setSecure} from '../persistence';
 
 const KEY = 'portfolio';
 
 export async function loadPortfolio(): Promise<PortfolioPosition[]> {
-  return (await getSecure<PortfolioPosition[]>(KEY)) ?? [];
+    return (await getSecure<PortfolioPosition[]>(KEY)) ?? [];
 }
 
 export async function savePortfolio(
-  positions: PortfolioPosition[],
+    positions: PortfolioPosition[],
 ): Promise<void> {
-  await setSecure(KEY, positions);
+    await setSecure(KEY, positions);
 }
