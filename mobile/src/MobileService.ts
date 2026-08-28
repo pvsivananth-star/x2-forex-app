@@ -19,7 +19,7 @@ import {
 
 import {
     fetchCryptoCatalog,
-} from './ratesApi';
+} from './services/rates/cryptoCatalogService';
 
 import {
     fetchCryptoForMobileService,

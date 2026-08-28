@@ -1,4 +1,4 @@
-import { CryptoCatalogItem, FetchedMap, Tenor } from './models';
+import {CryptoCatalogItem, FetchedMap, Tenor} from './models';
 
 const TENOR_DAYS: Record<Tenor, number> = {
     '1D': 1,
@@ -36,7 +36,7 @@ function percentageChange(current: number, reference: number): number {
 /* FX                                                                        */
 /* -------------------------------------------------------------------------- */
 
-const FX_MAP: Record<string, {ccy: string}> = {
+const FX_MAP: Record<string, { ccy: string }> = {
     EUR: {ccy: 'EUR'},
     JPY: {ccy: 'JPY'},
     GBP: {ccy: 'GBP'},
@@ -58,67 +58,6 @@ const FX_MAP: Record<string, {ccy: string}> = {
     THB: {ccy: 'THB'},
 };
 
-export async function fetchFxData(tenor: Tenor): Promise<FetchedMap> {
-    const currencies = Object.values(FX_MAP)
-        .map(item => item.ccy)
-        .join(',');
-
-    const result: FetchedMap = {
-        USD: {
-            rate: 1,
-            referenceRate: 1,
-            changePct: 0,
-        },
-    };
-
-    try {
-        const [currentResponse, historicalResponse] = await Promise.all([
-            fetch(
-                `https://api.frankfurter.app/latest?from=USD&to=${currencies}`,
-            ),
-            fetch(
-                `https://api.frankfurter.app/${isoDaysAgo(TENOR_DAYS[tenor])}?from=USD&to=${currencies}`,
-            ),
-        ]);
-
-        if (!currentResponse.ok) {
-            throw new Error('Current FX request failed');
-        }
-
-        const current = await currentResponse.json();
-        const historical = historicalResponse.ok
-            ? await historicalResponse.json()
-            : {};
-
-        Object.entries(FX_MAP).forEach(([symbol, mapping]) => {
-            const currentRaw = current?.rates?.[mapping.ccy];
-            const historicalRaw = historical?.rates?.[mapping.ccy];
-
-            if (typeof currentRaw !== 'number') {
-                return;
-            }
-
-            // Frankfurter returns currency units per 1 USD.
-            // Keep that convention throughout the FX pipeline:
-            // USD = 1, EUR = 0.8589, JPY = 155, etc.
-            const rate = currentRaw;
-            const reference =
-                typeof historicalRaw === 'number'
-                    ? historicalRaw
-                    : rate;
-
-            result[symbol] = {
-                rate: Number(rate.toFixed(8)),
-                referenceRate: Number(reference.toFixed(8)),
-                changePct: percentageChange(rate, reference),
-            };
-        });
-    } catch {
-        // Keep previous/cached values.
-    }
-
-    return result;
-}
 
 /* -------------------------------------------------------------------------- */
 /* COINGECKO                                                                  */
@@ -278,77 +217,6 @@ function referenceFromPercentage(
     return current / (1 + changePct / 100);
 }
 
-export async function fetchCryptoData(
-    tenor: Tenor,
-    selectedIds: string[],
-): Promise<FetchedMap> {
-    const result: FetchedMap = {};
-
-    if (!selectedIds.length) {
-        return result;
-    }
-
-    try {
-        const markets = await fetchCoinMarkets(selectedIds);
-        const marketMap = new Map<string, CoinMarket>();
-
-        markets.forEach(market => marketMap.set(market.id, market));
-
-        await Promise.all(
-            selectedIds.map(async id => {
-                const market = marketMap.get(id);
-                if (!market) {
-                    return;
-                }
-
-                const current = market.current_price;
-                if (typeof current !== 'number' || !Number.isFinite(current)) {
-                    return;
-                }
-
-                let reference: number | null = null;
-
-                if (tenor === '1D') {
-                    reference = referenceFromPercentage(
-                        current,
-                        market.price_change_percentage_24h,
-                    );
-                } else if (tenor === '1W') {
-                    reference = referenceFromPercentage(
-                        current,
-                        market.price_change_percentage_7d_in_currency,
-                    );
-                } else if (tenor === '1M') {
-                    reference = referenceFromPercentage(
-                        current,
-                        market.price_change_percentage_30d_in_currency,
-                    );
-                } else if (tenor === '1Y') {
-                    reference = referenceFromPercentage(
-                        current,
-                        market.price_change_percentage_1y_in_currency,
-                    );
-                } else {
-                    reference = await fetchCryptoHistory(id, TENOR_DAYS[tenor]);
-                }
-
-                if (!reference || !Number.isFinite(reference)) {
-                    reference = current;
-                }
-
-                result[id] = {
-                    rate: Number(current.toFixed(12)),
-                    referenceRate: Number(reference.toFixed(12)),
-                    changePct: percentageChange(current, reference),
-                };
-            }),
-        );
-    } catch {
-        // Keep previous values.
-    }
-
-    return result;
-}
 
 /* -------------------------------------------------------------------------- */
 /* METALS                                                                     */
@@ -362,8 +230,3 @@ const METAL_TICKERS: Record<string, string> = {
     XCU: 'HG=F',
 };
 
-export async function fetchMetalsData(tenor: Tenor): Promise<FetchedMap> {
-    // Existing metals implementation follows below in the original service.
-    // This section is retained by the repository implementation.
-    return {};
-}
