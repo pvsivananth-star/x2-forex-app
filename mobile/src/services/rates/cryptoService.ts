@@ -18,21 +18,26 @@ export async function fetchCryptoRates(
                 asset => asset.symbol === symbol,
             );
 
-            if (!catalog) {
-                return null;
+            if (catalog) {
+                return {
+                    ...catalog,
+                    rate: quote.rate,
+                    referenceRate: quote.referenceRate,
+                    changePct: quote.changePct,
+                };
             }
 
             return {
-                ...catalog,
+                symbol,
+                id: symbol,
+                displaySymbol: symbol,
+                name: symbol,
                 rate: quote.rate,
                 referenceRate: quote.referenceRate,
                 changePct: quote.changePct,
+                category: 'crypto',
             };
-        })
-        .filter(
-            (asset): asset is MarketAsset =>
-                asset !== null,
-        );
+        });
 
     return {
         data,
