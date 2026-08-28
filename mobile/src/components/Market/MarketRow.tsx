@@ -1,5 +1,6 @@
 import React from 'react';
-import {StyleSheet, Text, View} from 'react-native';
+import {Text, View} from 'react-native';
+import {styles} from './MarketRow.styles';
 import {MarketRate} from '../../models/market';
 import {RateInput} from './RateInput';
 
