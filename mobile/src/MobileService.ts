@@ -1,9 +1,9 @@
 import {create} from 'zustand';
 
 import {
-    getItem,
-    setItem,
-} from './services/persistence/storage';
+    loadMobileState,
+    saveMobileState,
+} from './services/persistence/mobileStateStorage';
 
 import {
     CRYPTO_DEFAULT_CATALOG,
@@ -901,8 +901,7 @@ async function persistState(
         persistedMarkets,
     };
 
-    await setItem(
-        STORAGE_KEY,
+    await saveMobileState(
         settings,
     );
 }
@@ -2197,13 +2196,7 @@ export const useMobileStore =
                 async () => {
                     try {
                         const saved =
-                            await getItem<
-                                PersistedSettings & {
-                                marketState?: PersistedMarketState;
-                            }
-                            >(
-                                STORAGE_KEY,
-                            );
+                            await loadMobileState();
 
                         if (saved) {
                             const fx =
