@@ -6,4 +6,9 @@ export const EQUITY_ORDER: EquityCatalogItem[] = [
   ['HSI','Hang Seng','HK',140], ['SHCOMP','Shanghai Composite','CN',150], ['SENSEX','Sensex','IN',160],
   ['NIFTY50','Nifty 50','IN',170], ['KOSPI','KOSPI','KR',180], ['ASX200','ASX 200','AU',190],
   ['TSX','S&P/TSX Composite','CA',200], ['IBOV','Bovespa','BR',210],
-].map(([symbol,name,country,priority]) => ({ symbol, name, country, priority: priority as number }));
+].map(([symbol, name, country, priority]: [string, string, string, number]) => ({
+  symbol,
+  name,
+  country,
+  priority,
+}));

@@ -1,13 +1,13 @@
 import React, {useState} from 'react';
 import {FlatList} from 'react-native';
-import { MarketRate } from '../../models';
+import {MarketAsset} from '../../models';
 import {MarketRow} from './MarketRow';
 
 export function MarketList({data, editable = false, onRateChange, activeSymbol}: {
-    data: MarketRate[];
+    data: MarketAsset[];
     editable?: boolean;
     onRateChange?: (symbol: string, value: number) => void;
-    activeSymbol?: string | null
+    activeSymbol?: string | null;
 }) {
     const [focusedSymbol, setFocusedSymbol] = useState<string | null>(null);
 
@@ -17,7 +17,15 @@ export function MarketList({data, editable = false, onRateChange, activeSymbol}:
             keyExtractor={x => x.symbol}
             renderItem={({item}) => (
                 <MarketRow
-                    item={item}
+                    item={{
+                        symbol: item.symbol,
+                        name: item.name,
+                        displaySymbol: item.displaySymbol,
+                        value: item.rate,
+                        category: item.category,
+                        changePct: item.changePct,
+                        referenceRate: item.referenceRate,
+                    }}
                     editable={editable && item.symbol !== 'USD'}
                     active={item.symbol === (focusedSymbol ?? activeSymbol)}
                     onChange={v => onRateChange?.(item.symbol, v)}

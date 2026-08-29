@@ -1,7 +1,7 @@
 import React from 'react';
 import {Text, View} from 'react-native';
 import {styles} from './MarketRow.styles';
-import { MarketRate } from '../../models';
+import {MarketRate} from '../../models';
 import {RateInput} from './RateInput';
 
 export function MarketRow({item, editable = false, active = false, onChange, onActivate, onDeactivate}: {
@@ -10,13 +10,13 @@ export function MarketRow({item, editable = false, active = false, onChange, onA
     active?: boolean;
     onChange?: (n: number) => void;
     onActivate?: () => void;
-    onDeactivate?: () => void
+    onDeactivate?: () => void;
 }) {
     return (
         <View style={styles.row}>
             <View style={styles.name}>
                 <Text style={styles.symbol}>{item.displaySymbol ?? item.symbol}</Text>
-                <Text style={styles.label}>{item.name}</Text>
+                <Text style={styles.name}>{item.name}</Text>
             </View>
 
             {editable ? (
@@ -33,4 +33,3 @@ export function MarketRow({item, editable = false, active = false, onChange, onA
         </View>
     );
 }
-

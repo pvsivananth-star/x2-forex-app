@@ -1,98 +1,77 @@
-import React, {useEffect, useRef, useState,} from 'react';
+import React, {useEffect, useState,} from 'react';
 
 import {Text, TextInput, View,} from 'react-native';
 import {makeRowStyles} from './MarketRow.styles';
 
 import { MarketAsset } from '../models';
-
-import {AppColors,} from '../theme';
+import { AppColors,} from '../theme';
 
 interface MarketRowProps {
     asset: MarketAsset;
     decimalPlaces: number;
     colors: AppColors;
-
-    onCommit: (
-        symbol: string,
-        value: string,
-    ) => void;
-
-    // Optional focus callbacks and visual active flag
+    draftValue?: string;
+    onDraftChange?: (symbol: string, value: string) => void;
+    onCommit: (symbol: string, value: string) => void;
     active?: boolean;
     onActivate?: () => void;
     onDeactivate?: () => void;
 }
 
-export const MarketRow: React.FC<
-    MarketRowProps
-> = ({
-         asset,
-         decimalPlaces,
-         colors,
-         onCommit,
-         active = false,
-         onActivate,
-         onDeactivate,
-     }) => {
-    const displaySymbol = asset.displaySymbol ?? asset.symbol;
-
+export const MarketRow: React.FC<MarketRowProps> = ({
+    asset,
+    decimalPlaces,
+    colors,
+    draftValue,
+    onDraftChange,
+    onCommit,
+    active = false,
+    onActivate,
+    onDeactivate,
+}) => {
     const formatted = asset.rate.toFixed(decimalPlaces);
-
-    const [draft, setDraft] = useState(formatted);
-
+    const [draft, setDraft] = useState(draftValue ?? formatted);
     const [focused, setFocused] = useState(false);
-
-    const lastCommittedRate = useRef(asset.rate);
 
     useEffect(() => {
         if (!focused) {
-            const next = asset.rate.toFixed(decimalPlaces);
-
-            if (next !== draft) {
-                setDraft(next);
-            }
-
-            lastCommittedRate.current = asset.rate;
+            const next = draftValue ?? asset.rate.toFixed(decimalPlaces);
+            if (next !== draft) setDraft(next);
         }
-    }, [asset.rate, decimalPlaces, focused]);
+    }, [asset.rate, decimalPlaces, draftValue, focused]);
+
+    const changeDraft = (value: string) => {
+        setDraft(value);
+        onDraftChange?.(asset.symbol, value);
+    };
 
     const commit = (value: string) => {
         const trimmed = value.trim();
-
         const parsed = Number(trimmed);
 
         if (!trimmed || !Number.isFinite(parsed) || parsed <= 0) {
-            setDraft(formatted);
+            const reset = draftValue ?? formatted;
+            setDraft(reset);
             return;
         }
 
         onCommit(asset.symbol, trimmed);
-
-        lastCommittedRate.current = parsed;
-
         setDraft(parsed.toFixed(decimalPlaces));
     };
 
     const positive = asset.changePct >= 0;
-
     const s = makeRowStyles(colors, active, asset.category === 'equity', positive);
 
     return (
         <View style={s.row}>
             <View style={s.assetColumn}>
-                <Text style={s.symbol} numberOfLines={1}>
-                    {displaySymbol}
-                </Text>
-
-                <Text style={s.name} numberOfLines={1}>
-                    {asset.name}
-                </Text>
+                <Text style={s.symbol} numberOfLines={1}>{asset.displaySymbol ?? asset.symbol}</Text>
+                <Text style={s.name} numberOfLines={1}>{asset.name}</Text>
             </View>
 
             <View style={s.rateColumn}>
                 {asset.category === 'equity' ? (
-                    // Render a non-editable label for equity rates
-                    <Text style={s.input} accessibilityLabel={`Rate for ${displaySymbol}`}>
+                    <Text style={s.input} accessibilityLabel={`Rate for ${asset.displaySymbol ?? asset.symbol}`}>
                         {formatted}
                     </Text>
                 ) : (
@@ -102,34 +81,30 @@ export const MarketRow: React.FC<
                             setFocused(true);
                             onActivate?.();
                         }}
-                        onChangeText={setDraft}
+                        onChangeText={changeDraft}
                         onBlur={() => {
-                            // Do not commit on blur — only commit on explicit submit (enter/tab).
                             setFocused(false);
                             onDeactivate?.();
                         }}
-
                         onSubmitEditing={() => {
-                            setFocused(false);
-                            // Commit only when user submits (Enter/Done)
                             commit(draft);
+                            setFocused(false);
+                            onDeactivate?.();
                         }}
                         selectTextOnFocus
                         keyboardType="decimal-pad"
                         returnKeyType="done"
                         style={s.input}
-                        accessibilityLabel={`Rate for ${displaySymbol}`}
+                        accessibilityLabel={`Rate for ${asset.displaySymbol ?? asset.symbol}`}
                     />
                 )}
             </View>
 
             <View style={s.changeColumn}>
                 <Text style={s.changeText}>
-                    {positive ? '+' : ''}
-                    {asset.changePct.toFixed(2)}%
+                    {positive ? '+' : ''}{asset.changePct.toFixed(2)}%
                 </Text>
             </View>
         </View>
     );
 };
-

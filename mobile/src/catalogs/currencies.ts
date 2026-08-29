@@ -8,6 +8,13 @@ export const FX_CATALOG: MarketAsset[] = [
   ['HKD','Hong Kong Dollar',7.8], ['INR','Indian Rupee',87], ['ZAR','South African Rand',18.2],
   ['BRL','Brazilian Real',5.5], ['MXN','Mexican Peso',19.1], ['PLN','Polish Zloty',3.9],
   ['DKK','Danish Krone',6.6], ['THB','Thai Baht',32.5],
-].map(([symbol,name,rate]) => ({ symbol, name, rate: rate as number, changePct: 0, referenceRate: rate as number, category: 'fx' }));
+].map(([symbol, name, rate]: [string, string, number]) => ({
+  symbol,
+  name,
+  rate,
+  changePct: 0,
+  referenceRate: rate,
+  category: 'fx' as const,
+}));
 
 export const DEFAULT_FX = ['USD','EUR','JPY','GBP','CAD','AUD','CHF','CNY','SEK','NOK'];

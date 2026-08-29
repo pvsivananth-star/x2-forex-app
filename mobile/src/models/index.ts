@@ -1,11 +1,8 @@
 export type TabCategory = 'fx' | 'equity' | 'crypto' | 'metals' | 'portfolio';
 
 export type Tenor = '1D' | '1W' | '1M' | '3M' | '6M' | '1Y';
-
 export type DecimalPlaces = 2 | 3 | 4;
-
 export type ThemePreference = 'system' | 'light' | 'dark';
-
 export type AssetCategory = 'fx' | 'equity' | 'crypto' | 'metals';
 
 export interface MarketAsset {
@@ -21,7 +18,6 @@ export interface MarketAsset {
   country?: string;
 }
 
-// Legacy compatibility: some older modules expect MarketRate with a `value` field
 export interface MarketRate {
   symbol: string;
   name: string;
@@ -60,9 +56,22 @@ export interface CryptoCatalogItem {
   name: string;
 }
 
+export interface PersistedMarketCategory {
+  symbol: string | null;
+  value: number | null;
+}
+
+export interface PersistedMarketState {
+  fx?: PersistedMarketCategory;
+  crypto?: PersistedMarketCategory;
+  metals?: PersistedMarketCategory;
+}
+
 export interface PersistedSettings {
   activeTab: TabCategory;
-  tenor: Tenor;
+  tenorFx: Tenor;
+  tenorCrypto: Tenor;
+  tenorMetals: Tenor;
   decimalPlaces: DecimalPlaces;
   theme: ThemePreference;
 
@@ -72,6 +81,7 @@ export interface PersistedSettings {
   watchlistMetals: string[];
 
   editedRates: Record<string, number>;
+  marketState?: PersistedMarketState;
 }
 
 export interface MarketResult {

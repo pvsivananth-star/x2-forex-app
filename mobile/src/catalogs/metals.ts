@@ -6,6 +6,13 @@ export const METAL_CATALOG: MarketAsset[] = [
   ['XRH_1OZ','Rhodium · 1 Troy Oz',4500], ['XCU_1LB','Copper · 1 lb',4.35],
   ['XAL_1LB','Aluminium · 1 lb',1.1], ['XNI_1LB','Nickel · 1 lb',7.5],
   ['XZN_1LB','Zinc · 1 lb',1.2], ['XPB_1LB','Lead · 1 lb',0.95],
-].map(([symbol,name,rate]) => ({ symbol, name: name as string, rate: rate as number, changePct: 0, referenceRate: rate as number, category: 'metals' }));
+].map(([symbol, name, rate]: [string, string, number]) => ({
+  symbol,
+  name,
+  rate,
+  changePct: 0,
+  referenceRate: rate,
+  category: 'metals' as const,
+}));
 
 export const DEFAULT_METALS = METAL_CATALOG.map(x => x.symbol);
