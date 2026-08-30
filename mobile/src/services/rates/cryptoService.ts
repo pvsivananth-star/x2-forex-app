@@ -2,93 +2,115 @@ import {CRYPTO_DEFAULT_CATALOG} from '../../catalogs/crypto';
 import {MarketAsset, Tenor} from '../../models';
 import {MarketResult} from './types';
 
-const TENOR_DAYS: Record<Tenor, number> = {'1D': 1, '1W': 7, '1M': 30, '3M': 90, '6M': 180, '1Y': 365};
-const COINGECKO_BASE = 'https://api.coingecko.com/api/v3';
-const COINGECKO_API_KEY = process.env.EXPO_PUBLIC_COINGECKO_API_KEY ?? '';
+const COINCAP_BASE = 'https://api.coincap.io/v2';
+const COINCAP_IDS: Record<string, string> = {
+    bitcoin: 'bitcoin',
+    ethereum: 'ethereum',
+    tether: 'tether',
+    binancecoin: 'binance-coin',
+    solana: 'solana',
+    ripple: 'xrp',
+    'usd-coin': 'usd-coin',
+    dogecoin: 'dogecoin',
+    cardano: 'cardano',
+    'avalanche-2': 'avalanche',
+};
 
-function coinGeckoHeaders(): Record<string, string> {
-    return COINGECKO_API_KEY ? {'x-cg-demo-api-key': COINGECKO_API_KEY} : {};
-}
-
-interface CoinMarket {
+type CoinCapAsset = {
     id: string;
-    current_price: number | null;
-    price_change_percentage_24h: number | null;
-    price_change_percentage_7d_in_currency?: number | null;
-    price_change_percentage_30d_in_currency?: number | null;
-    price_change_percentage_1y_in_currency?: number | null;
+    name: string;
+    symbol: string;
+    priceUsd: string;
+    changePercent24Hr: string;
+};
+
+function number(value: unknown): number | null {
+    const parsed = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
-const MARKET_BATCH_SIZE = 100;
-
-async function fetchCoinMarkets(ids: string[]): Promise<CoinMarket[]> {
-    if (!ids.length) return [];
-    const batches: string[][] = [];
-    for (let i = 0; i < ids.length; i += MARKET_BATCH_SIZE) batches.push(ids.slice(i, i + MARKET_BATCH_SIZE));
-    const results = await Promise.all(batches.map(async batch => {
-        const response = await fetch(`${COINGECKO_BASE}/coins/markets?vs_currency=usd&ids=${batch.map(encodeURIComponent).join(',')}&order=market_cap_desc&per_page=250&page=1&sparkline=false&price_change_percentage=24h,7d,30d,1y`, {headers: coinGeckoHeaders()});
-        if (!response.ok) throw new Error('CoinGecko market request failed');
-        return (await response.json()) as CoinMarket[];
-    }));
-    return results.flat();
-}
-
-async function fetchCryptoHistory(id: string, days: number): Promise<number | null> {
-    try {
-        const response = await fetch(`${COINGECKO_BASE}/coins/${encodeURIComponent(id)}/market_chart?vs_currency=usd&days=${days}`, {headers: coinGeckoHeaders()});
-        if (!response.ok) return null;
-        const json = await response.json();
-        const prices = Array.isArray(json?.prices) ? json.prices : [];
-        const first = prices[0]?.[1];
-        return typeof first === 'number' ? first : null;
-    } catch {
-        return null;
-    }
-}
-
-function referenceFromPercentage(current: number, changePct: number | null | undefined): number | null {
-    if (typeof changePct !== 'number' || !Number.isFinite(changePct) || changePct <= -100) return null;
+function referenceFromPercentage(current: number, changePct: number): number {
+    if (!Number.isFinite(changePct) || changePct <= -100) return current;
     return current / (1 + changePct / 100);
 }
 
 function percentageChange(current: number, reference: number): number {
-    if (!Number.isFinite(current) || !Number.isFinite(reference) || reference === 0) return 0;
+    if (!Number.isFinite(current) || !Number.isFinite(reference) || reference <= 0) return 0;
     return Number((((current - reference) / reference) * 100).toFixed(2));
 }
 
-export async function fetchCryptoRates(tenor: Tenor, selectedIds: string[]): Promise<MarketResult> {
-    if (!selectedIds.length) return {data: [], isOffline: false, timestamp: Date.now()};
+async function fetchCoinCap(ids: string[]): Promise<CoinCapAsset[]> {
+    const providerIds = ids.map(id => COINCAP_IDS[id]).filter(Boolean);
+    if (!providerIds.length) return [];
+
+    const response = await fetch(`${COINCAP_BASE}/assets?ids=${providerIds.join(',')}`);
+    if (!response.ok) throw new Error(`CoinCap request failed: ${response.status}`);
+
+    const json = await response.json();
+    return Array.isArray(json?.data) ? json.data as CoinCapAsset[] : [];
+}
+
+function mapCoinCapAsset(catalogId: string, market: CoinCapAsset): MarketAsset | null {
+    const current = number(market.priceUsd);
+    if (current === null) return null;
+
+    const change24h = Number(market.changePercent24Hr);
+    const reference = referenceFromPercentage(current, change24h);
+    const catalog = CRYPTO_DEFAULT_CATALOG.find(asset => asset.symbol === catalogId);
+
+    return {
+        ...(catalog ?? {
+            symbol: catalogId,
+            id: catalogId,
+            displaySymbol: market.symbol,
+            name: market.name,
+            category: 'crypto' as const,
+            changePct: 0,
+            rate: 0,
+        }),
+        rate: Number(current.toFixed(12)),
+        referenceRate: Number(reference.toFixed(12)),
+        changePct: percentageChange(current, reference),
+    };
+}
+
+/**
+ * Crypto rates are USD prices: 1 BTC = N USD, 1 ETH = N USD, etc.
+ * CoinCap is used because it is keyless and therefore works without an
+ * Expo-managed API secret. The catalog order is preserved independently of
+ * provider response order.
+ */
+export async function fetchCryptoRates(_tenor: Tenor, selectedIds: string[]): Promise<MarketResult> {
+    const ids = selectedIds.filter(id => id !== 'USD');
+    if (!ids.length) {
+        return {data: [{symbol: 'USD', name: 'US Dollar', rate: 1, referenceRate: 1, changePct: 0, category: 'crypto'}], isOffline: false, timestamp: Date.now()};
+    }
 
     try {
-        const markets = await fetchCoinMarkets(selectedIds);
-        const marketMap = new Map<string, CoinMarket>();
-        markets.forEach(market => marketMap.set(market.id, market));
+        const markets = await fetchCoinCap(ids);
+        const byProviderId = new Map(markets.map(market => [market.id, market]));
+        const data: MarketAsset[] = [];
 
-        const mapped = await Promise.all(selectedIds.map(async id => {
-            const market = marketMap.get(id);
-            if (!market) return null;
-            const current = market.current_price;
-            if (typeof current !== 'number' || !Number.isFinite(current)) return null;
+        for (const id of ids) {
+            const market = byProviderId.get(COINCAP_IDS[id]);
+            if (!market) continue;
+            const mapped = mapCoinCapAsset(id, market);
+            if (mapped) data.push(mapped);
+        }
 
-            let reference: number | null;
-            if (tenor === '1D') reference = referenceFromPercentage(current, market.price_change_percentage_24h);
-            else if (tenor === '1W') reference = referenceFromPercentage(current, market.price_change_percentage_7d_in_currency);
-            else if (tenor === '1M') reference = referenceFromPercentage(current, market.price_change_percentage_30d_in_currency);
-            else if (tenor === '1Y') reference = referenceFromPercentage(current, market.price_change_percentage_1y_in_currency);
-            else reference = await fetchCryptoHistory(id, TENOR_DAYS[tenor]);
-
-            if (!reference || !Number.isFinite(reference)) reference = current;
-            const catalog = CRYPTO_DEFAULT_CATALOG.find(asset => asset.symbol === id);
-            if (catalog) {
-                return {...catalog, rate: Number(current.toFixed(12)), referenceRate: Number(reference.toFixed(12)), changePct: percentageChange(current, reference)};
-            }
-            return {symbol: id, id, displaySymbol: id, name: id, rate: Number(current.toFixed(12)), referenceRate: Number(reference.toFixed(12)), changePct: percentageChange(current, reference), category: 'crypto' as const};
-        }));
-
-        const data = mapped.filter(asset => asset !== null) as MarketAsset[];
+        // Always keep USD at the top and preserve the requested catalog order.
         data.unshift({symbol: 'USD', name: 'US Dollar', rate: 1, referenceRate: 1, changePct: 0, category: 'crypto'});
-        return {data, isOffline: data.length <= 1, timestamp: Date.now()};
+
+        return {
+            data,
+            isOffline: data.length === 1,
+            timestamp: Date.now(),
+        };
     } catch {
-        return {data: [], isOffline: true, timestamp: Date.now()};
+        return {
+            data: [{symbol: 'USD', name: 'US Dollar', rate: 1, referenceRate: 1, changePct: 0, category: 'crypto'}],
+            isOffline: true,
+            timestamp: Date.now(),
+        };
     }
 }
