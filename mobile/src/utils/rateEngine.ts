@@ -6,18 +6,11 @@ export interface CalculatedRate {
 }
 
 /**
- * All FX rates are stored as currency units per 1 USD.
+ * Rates are stored as units of each asset per 1 USD.
  *
- * Example:
- * USD = 1
- * EUR = 0.86
- * JPY = 155
- *
- * A user edit is an amount in the selected currency. The engine first
- * converts that amount to USD, then converts the USD amount into every
- * other currency using currency-per-USD rates.
- *
- * The edited row is returned verbatim and is never recalculated.
+ * USD is always the anchor at 1. A user edit is an amount in the selected
+ * asset. We first convert that amount to USD, then convert USD into every
+ * other asset in the same rate set.
  */
 export function calculateFromAnchor(
     base: RateBase,
@@ -32,35 +25,24 @@ export function calculateFromAnchor(
         !Number.isFinite(anchorPerUsd) ||
         anchorPerUsd <= 0
     ) {
-        return Object.entries(base).map(
-            ([symbol, value]) => ({
-                symbol,
-                value,
-            }),
-        );
+        return Object.entries(base).map(([symbol, value]) => ({symbol, value}));
     }
 
-    const usdAmount =
-        anchorSymbol === 'USD'
-            ? anchorValue
-            : anchorValue / anchorPerUsd;
+    const usdAmount = anchorSymbol === 'USD'
+        ? anchorValue
+        : anchorValue / anchorPerUsd;
 
-    return Object.entries(base).map(
-        ([symbol, perUsd]) => ({
-            symbol,
-            value:
-                symbol === anchorSymbol
-                    ? anchorValue
-                    : symbol === 'USD'
-                        ? usdAmount
-                        : usdAmount * perUsd,
-        }),
-    );
+    return Object.entries(base).map(([symbol, perUsd]) => ({
+        symbol,
+        value: symbol === anchorSymbol
+            ? anchorValue
+            : symbol === 'USD'
+                ? usdAmount
+                : usdAmount * perUsd,
+    }));
 }
 
-export function normalizeBaseRates(
-    rates: RateBase,
-): RateBase {
+export function normalizeBaseRates(rates: RateBase): RateBase {
     return {
         USD: 1,
         ...Object.fromEntries(
@@ -93,10 +75,9 @@ export function convert(
         return 0;
     }
 
-    const usdAmount =
-        fromSymbol === 'USD'
-            ? amount
-            : amount / fromPerUsd;
+    const usdAmount = fromSymbol === 'USD'
+        ? amount
+        : amount / fromPerUsd;
 
     return toSymbol === 'USD'
         ? usdAmount
