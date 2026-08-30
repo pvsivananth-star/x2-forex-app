@@ -1,5 +1,6 @@
 import type { IPersistenceService } from '../contracts/IPersistenceService';
 import {
+  clearMobileState,
   loadMobileState,
   saveMobileState,
 } from './mobileStateStorage';
@@ -12,5 +13,9 @@ export class PersistenceService implements IPersistenceService<PersistedSettings
 
   async save(state: PersistedSettings): Promise<void> {
     await saveMobileState(state);
+  }
+
+  async clear(): Promise<void> {
+    await clearMobileState();
   }
 }
