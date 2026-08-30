@@ -6,5 +6,13 @@ import {useMobileStore} from '../state/marketStore';
 
 export function CryptoScreen() {
     const rates = useMobileStore(s => s.visibleRates('crypto'));
-    return <View style={{flex: 1}}><AppHeader title="Crypto"/><MarketList data={rates}/></View>;
+    const edit = useMobileStore(s => s.setEditedRate);
+    const active = useMobileStore(s => s.editedSymbol);
+
+    return (
+        <View style={{flex: 1}}>
+            <AppHeader title="Crypto" />
+            <MarketList data={rates} editable onRateChange={edit} activeSymbol={active} />
+        </View>
+    );
 }
