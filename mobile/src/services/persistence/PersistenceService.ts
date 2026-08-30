@@ -1,13 +1,14 @@
-import type { IPersistenceService } from '../contracts/IPersistenceService';
+import type {IPersistenceService} from '../contracts/IPersistenceService';
 import {
   clearMobileState,
   loadMobileState,
   saveMobileState,
 } from './mobileStateStorage';
-import type { PersistedSettings } from '../../models';
+import type {StoredMobileState} from './mobileStateStorage';
+import type {PersistedSettings} from '../../models';
 
-export class PersistenceService implements IPersistenceService<PersistedSettings> {
-  async load(): Promise<PersistedSettings | null> {
+export class PersistenceService implements IPersistenceService<StoredMobileState> {
+  async load(): Promise<StoredMobileState | null> {
     return loadMobileState();
   }
 
