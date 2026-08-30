@@ -1,28 +1,15 @@
 import {
     CRYPTO_DEFAULT_CATALOG,
-    DEFAULT_EQUITY,
     FX_CATALOG,
     METAL_CATALOG,
 } from '../catalogs';
 
 import {EQUITY_ORDER} from '../catalogs/equities';
 
-import type {
-    MarketAsset,
-    TabCategory,
-} from '../models';
+import type {MarketAsset, TabCategory} from '../models';
 
-export type Category =
-    | 'fx'
-    | 'equity'
-    | 'crypto'
-    | 'metals';
-
-export type MarketSnapshot = {
-    rate: number;
-    referenceRate: number;
-};
-
+export type Category = 'fx' | 'equity' | 'crypto' | 'metals';
+export type MarketSnapshot = {rate: number; referenceRate: number};
 export type CategoryState = {
     assets: Record<string, MarketAsset>;
     marketRates: Record<string, MarketSnapshot>;
@@ -30,63 +17,36 @@ export type CategoryState = {
     editedValue: number | null;
 };
 
-export function categoryForTab(
-    tab: TabCategory,
-): Category | null {
-    if (tab === 'fx') {
-        return 'fx';
-    }
-
-    if (tab === 'crypto') {
-        return 'crypto';
-    }
-
-    if (tab === 'metals') {
-        return 'metals';
-    }
-
-    if (tab === 'equity') {
-        return 'equity';
-    }
-
+export function categoryForTab(tab: TabCategory): Category | null {
+    if (tab === 'fx') return 'fx';
+    if (tab === 'crypto') return 'crypto';
+    if (tab === 'metals') return 'metals';
+    if (tab === 'equity') return 'equity';
     return null;
 }
 
-export function percentage(
-    rate: number,
-    reference: number,
-): number {
-    if (
-        !Number.isFinite(rate) ||
-        !Number.isFinite(reference) ||
-        reference === 0
-    ) {
-        return 0;
-    }
-
-    return Number(
-        (((rate - reference) / reference) * 100).toFixed(2),
-    );
+export function percentage(rate: number, reference: number): number {
+    if (!Number.isFinite(rate) || !Number.isFinite(reference) || reference === 0) return 0;
+    return Number((((rate - reference) / reference) * 100).toFixed(2));
 }
 
-function cloneAssets(
-    assets: MarketAsset[],
-): Record<string, MarketAsset> {
-    return Object.fromEntries(
-        assets.map(asset => [
-            asset.symbol,
-            {...asset},
-        ]),
-    );
+function cloneAssets(assets: MarketAsset[]): Record<string, MarketAsset> {
+    return Object.fromEntries(assets.map(asset => [asset.symbol, {...asset}]));
 }
 
-export function createInitialCategoryState(
-    category: Category,
-): CategoryState {
-    const assets = category === 'fx'
+export function createInitialCategoryState(category: Category): CategoryState {
+    const assets: MarketAsset[] = category === 'fx'
         ? FX_CATALOG
         : category === 'equity'
-            ? DEFAULT_EQUITY
+            ? EQUITY_ORDER.map(item => ({
+                symbol: item.symbol,
+                name: item.name,
+                country: item.country,
+                rate: 0,
+                referenceRate: 0,
+                changePct: 0,
+                category: 'equity' as const,
+            }))
             : category === 'crypto'
                 ? CRYPTO_DEFAULT_CATALOG
                 : METAL_CATALOG;
