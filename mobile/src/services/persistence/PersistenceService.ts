@@ -5,14 +5,13 @@ import {
   saveMobileState,
 } from './mobileStateStorage';
 import type {StoredMobileState} from './mobileStateStorage';
-import type {PersistedSettings} from '../../models';
 
 export class PersistenceService implements IPersistenceService<StoredMobileState> {
   async load(): Promise<StoredMobileState | null> {
     return loadMobileState();
   }
 
-  async save(state: PersistedSettings): Promise<void> {
+  async save(state: StoredMobileState): Promise<void> {
     await saveMobileState(state);
   }
 
