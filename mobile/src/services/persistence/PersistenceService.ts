@@ -13,10 +13,4 @@ export class PersistenceService implements IPersistenceService<PersistedSettings
   async save(state: PersistedSettings): Promise<void> {
     await saveMobileState(state);
   }
-
-  async clear(): Promise<void> {
-    // The existing persistence boundary has no clear operation yet.
-    // Keep the contract explicit without changing current behavior.
-    throw new Error('Persistence clear is not implemented');
-  }
 }
