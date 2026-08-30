@@ -1,4 +1,4 @@
-import type { Tenor } from '../../models';
+import type {Tenor, FetchedMap} from '../../models';
 
 export type MarketKind = 'fx' | 'crypto' | 'metals' | 'equity';
 
@@ -8,14 +8,7 @@ export interface RateRequest {
   symbols?: string[];
 }
 
-export interface RateData {
-  symbol: string;
-  rate: number;
-  referenceRate: number;
-  changePct: number;
-}
-
 export interface IRateService {
-  getRates(request: RateRequest): Promise<RateData[]>;
-  refreshRates(request: RateRequest): Promise<RateData[]>;
+  getRates(request: RateRequest): Promise<FetchedMap>;
+  refreshRates(request: RateRequest): Promise<FetchedMap>;
 }
