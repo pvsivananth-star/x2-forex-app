@@ -3,15 +3,28 @@ import type {
   MarketKind,
   RateRequest,
 } from '../contracts/IRateService';
-import type {FetchedMap, Tenor} from '../../models';
+import type {FetchedMap, MarketResult, Tenor} from '../../models';
 import {
-  fetchCryptoForMobileService,
-  fetchEquityForMobileService,
-  fetchFxForMobileService,
-  fetchMetalsForMobileService,
-} from './mobileServiceAdapters';
+  fetchCryptoRates,
+  fetchEquityRates,
+  fetchFxRates,
+  fetchMetalsRates,
+} from './';
 
 const DEFAULT_TENOR: Tenor = '1D';
+
+function toFetchedMap(result: MarketResult): FetchedMap {
+  return Object.fromEntries(
+    result.data.map(asset => [
+      asset.symbol,
+      {
+        rate: asset.rate,
+        referenceRate: asset.referenceRate ?? asset.rate,
+        changePct: asset.changePct,
+      },
+    ]),
+  );
+}
 
 export class RateService implements IRateService {
   async getRates(request: RateRequest): Promise<FetchedMap> {
@@ -25,31 +38,35 @@ export class RateService implements IRateService {
   private async fetch(request: RateRequest): Promise<FetchedMap> {
     const tenor = request.tenor ?? DEFAULT_TENOR;
 
-    let result: FetchedMap;
+    let result: MarketResult;
 
     switch (request.market as MarketKind) {
       case 'fx':
-        result = await fetchFxForMobileService(tenor);
+        result = await fetchFxRates(tenor);
         break;
       case 'crypto':
-        result = await fetchCryptoForMobileService(tenor, request.symbols ?? []);
+        result = await fetchCryptoRates(tenor, request.symbols ?? []);
         break;
       case 'metals':
-        result = await fetchMetalsForMobileService(tenor);
+        result = await fetchMetalsRates(tenor);
         break;
       case 'equity':
-        result = await fetchEquityForMobileService();
+        result = await fetchEquityRates();
         break;
       default:
-        result = {};
+        result = {data: [], isOffline: true, timestamp: Date.now()};
     }
 
+    const fetched = toFetchedMap(result);
+
     if (!request.symbols?.length) {
-      return result;
+      return fetched;
     }
 
     return Object.fromEntries(
-      Object.entries(result).filter(([symbol]) => request.symbols!.includes(symbol)),
+      Object.entries(fetched).filter(([symbol]) =>
+        request.symbols!.includes(symbol),
+      ),
     );
   }
 }
