@@ -1,0 +1,1 @@
+Rate calculation verification marker. See MobileService.ts, cryptoService.ts and metalsService.ts.
