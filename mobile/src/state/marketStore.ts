@@ -29,9 +29,7 @@ type State = {
     lastSynced: number;
 };
 
-const initialBase: RateBase = normalizeBaseRates(
-    Object.fromEntries(FX_CATALOG.map(asset => [asset.symbol, asset.rate])),
-);
+const initialBase: RateBase = normalizeBaseRates(Object.fromEntries(FX_CATALOG.map(asset => [asset.symbol, asset.rate])));
 
 const initialCryptoAssets: MarketAsset[] = [
     {symbol: 'USD', name: 'US Dollar', rate: 1, referenceRate: 1, changePct: 0, category: 'crypto'},
@@ -58,33 +56,21 @@ const initialAssets: Record<string, MarketAsset> = Object.fromEntries([
     }] as const),
 ]);
 
-const initialCryptoBase = normalizeBaseRates(
-    Object.fromEntries([
-        ['USD', 1],
-        ...CRYPTO_DEFAULT_CATALOG
-            .filter(asset => asset.rate > 0)
-            .map(asset => [asset.symbol, asset.rate]),
-    ]),
-);
+const initialCryptoBase = normalizeBaseRates(Object.fromEntries([
+    ['USD', 1],
+    ...CRYPTO_DEFAULT_CATALOG.filter(asset => asset.rate > 0).map(asset => [asset.symbol, asset.rate]),
+]));
 
-const initialMetalBase = normalizeBaseRates(
-    Object.fromEntries([
-        ['USD', 1],
-        ...METAL_CATALOG
-            .filter(asset => asset.rate > 0)
-            .map(asset => [asset.symbol, asset.rate]),
-    ]),
-);
+const initialMetalBase = normalizeBaseRates(Object.fromEntries([
+    ['USD', 1],
+    ...METAL_CATALOG.filter(asset => asset.rate > 0).map(asset => [asset.symbol, asset.rate]),
+]));
 
 let state: State = {
     activeTab: 'fx',
     assets: initialAssets,
     baseRates: initialBase,
-    categoryBaseRates: {
-        fx: initialBase,
-        crypto: initialCryptoBase,
-        metals: initialMetalBase,
-    },
+    categoryBaseRates: {fx: initialBase, crypto: initialCryptoBase, metals: initialMetalBase},
     editedSymbol: null,
     editedCategory: null,
     editedAnchorValue: null,
@@ -100,40 +86,39 @@ let state: State = {
 const listeners = new Set<() => void>();
 let refreshPromise: Promise<void> | null = null;
 
-function emit() {
-    listeners.forEach(listener => listener());
-}
-
-function setState(next: Partial<State>) {
-    state = {...state, ...next};
-    emit();
-}
+function emit() { listeners.forEach(listener => listener()); }
+function setState(next: Partial<State>) { state = {...state, ...next}; emit(); }
 
 function categoryForAsset(asset: MarketAsset | undefined): RateCategory | null {
-    if (asset?.category === 'fx' || asset?.category === 'crypto' || asset?.category === 'metals') {
-        return asset.category;
-    }
+    if (asset?.category === 'fx' || asset?.category === 'crypto' || asset?.category === 'metals') return asset.category;
     return null;
 }
 
-function valuesForEdit(
-    category: RateCategory,
-    symbol: string,
-    value: number,
-    rates: Record<RateCategory, RateBase>,
-): Record<string, number> {
-    const calculated = calculateFromAnchor(rates[category], symbol, value);
+function activeRateCategory(): RateCategory | null {
+    if (state.activeTab === 'fx' || state.activeTab === 'crypto' || state.activeTab === 'metals') return state.activeTab;
+    return null;
+}
+
+function resolveEditCategory(symbol: string): RateCategory | null {
+    // USD exists in all three market views and is intentionally the fixed anchor.
+    // The active market, not the shared asset record, determines which rate set USD belongs to.
+    if (symbol === 'USD') return activeRateCategory();
+    return categoryForAsset(state.assets[symbol]);
+}
+
+function valuesForEdit(category: RateCategory, symbol: string, value: number): Record<string, number> {
+    const calculated = calculateFromAnchor(state.categoryBaseRates[category], symbol, value);
     return Object.fromEntries(calculated.map(item => [item.symbol, item.value]));
 }
 
-function recalculateEdit(
-    categoryBaseRates: Record<RateCategory, RateBase>,
-    editedCategory: RateCategory | null,
-    editedSymbol: string | null,
-    editedAnchorValue: number | null,
-): Record<string, number> {
-    if (!editedCategory || !editedSymbol || editedAnchorValue === null) return {};
-    return valuesForEdit(editedCategory, editedSymbol, editedAnchorValue, categoryBaseRates);
+function recalculateEdit(categoryBaseRates: Record<RateCategory, RateBase>): Record<string, number> {
+    if (!state.editedCategory || !state.editedSymbol || state.editedAnchorValue === null) return {};
+    const calculated = calculateFromAnchor(
+        categoryBaseRates[state.editedCategory],
+        state.editedSymbol,
+        state.editedAnchorValue,
+    );
+    return Object.fromEntries(calculated.map(item => [item.symbol, item.value]));
 }
 
 async function refreshRates(): Promise<void> {
@@ -150,13 +135,17 @@ async function refreshRates(): Promise<void> {
             ]);
 
             const nextAssets: Record<string, MarketAsset> = {...state.assets};
-            const applyResult = (data: MarketAsset[]) => data.forEach(asset => {
+            const applyResult = (data: MarketAsset[], preserveSharedUsd = false) => data.forEach(asset => {
+                if (preserveSharedUsd && asset.symbol === 'USD') return;
                 nextAssets[asset.symbol] = {...nextAssets[asset.symbol], ...asset};
             });
+
+            // USD is shared by FX/crypto/metals. Keep one canonical USD asset record and
+            // never let a later market response overwrite its category metadata.
             applyResult(fx.data);
-            applyResult(crypto.data);
-            applyResult(metals.data);
-            applyResult(equity.data);
+            applyResult(crypto.data, true);
+            applyResult(metals.data, true);
+            applyResult(equity.data, true);
 
             const nextCategoryBaseRates: Record<RateCategory, RateBase> = {
                 fx: normalizeBaseRates(Object.fromEntries(fx.data.map(asset => [asset.symbol, asset.rate]))),
@@ -164,18 +153,11 @@ async function refreshRates(): Promise<void> {
                 metals: normalizeBaseRates(Object.fromEntries(metals.data.map(asset => [asset.symbol, asset.rate]))),
             };
 
-            const nextEditedValues = recalculateEdit(
-                nextCategoryBaseRates,
-                state.editedCategory,
-                state.editedSymbol,
-                state.editedAnchorValue,
-            );
-
             setState({
                 assets: nextAssets,
                 baseRates: nextCategoryBaseRates.fx,
                 categoryBaseRates: nextCategoryBaseRates,
-                editedValues: nextEditedValues,
+                editedValues: recalculateEdit(nextCategoryBaseRates),
                 isLoading: false,
                 isOnline: !fx.isOffline || !crypto.isOffline || !metals.isOffline || !equity.isOffline,
                 lastSynced: Date.now(),
@@ -183,9 +165,7 @@ async function refreshRates(): Promise<void> {
         } catch {
             setState({isLoading: false, isOnline: false});
         }
-    })().finally(() => {
-        refreshPromise = null;
-    });
+    })().finally(() => { refreshPromise = null; });
 
     return refreshPromise;
 }
@@ -216,31 +196,17 @@ export const marketStore = {
     },
     setEditedRate: (symbol: string, value: number) => {
         if (!Number.isFinite(value) || value <= 0) return;
-
-        const asset = state.assets[symbol];
-        const category = categoryForAsset(asset);
-        if (!category) return;
-
-        const editedValues = valuesForEdit(
-            category,
-            symbol,
-            value,
-            state.categoryBaseRates,
-        );
+        const category = resolveEditCategory(symbol);
+        if (!category || !state.categoryBaseRates[category][symbol]) return;
 
         setState({
             editedSymbol: symbol,
             editedCategory: category,
             editedAnchorValue: value,
-            editedValues,
+            editedValues: valuesForEdit(category, symbol, value),
         });
     },
-    clearEdit: () => setState({
-        editedSymbol: null,
-        editedCategory: null,
-        editedAnchorValue: null,
-        editedValues: {},
-    }),
+    clearEdit: () => setState({editedSymbol: null, editedCategory: null, editedAnchorValue: null, editedValues: {}}),
     visibleRates: (category: 'fx' | 'crypto' | 'metals' | 'equity') => {
         const symbols = category === 'fx'
             ? DEFAULT_FX
@@ -253,9 +219,7 @@ export const marketStore = {
         return symbols.map(symbol => {
             const asset = state.assets[symbol];
             if (!asset) return null;
-            const value = state.editedCategory === category
-                ? state.editedValues[symbol] ?? asset.rate
-                : asset.rate;
+            const value = state.editedCategory === category ? state.editedValues[symbol] ?? asset.rate : asset.rate;
             return {...asset, rate: value, value};
         }).filter(Boolean) as MarketAsset[];
     },
