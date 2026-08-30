@@ -13,7 +13,11 @@ export class CatalogService implements ICatalogService {
       case 'fx':
         return FX_CATALOG.map(item => ({ symbol: item.symbol, name: item.name }));
       case 'crypto':
-        return CRYPTO_DEFAULT_CATALOG.map(item => ({ symbol: item.symbol, name: item.name }));
+        return CRYPTO_DEFAULT_CATALOG.map(item => ({
+          id: item.id,
+          symbol: item.symbol,
+          name: item.name,
+        }));
       case 'metals':
         return METAL_CATALOG.map(item => ({ symbol: item.symbol, name: item.name }));
       case 'equity':
