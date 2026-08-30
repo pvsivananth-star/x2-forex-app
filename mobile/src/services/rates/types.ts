@@ -1,16 +1,11 @@
-import {MarketAsset} from '../../models';
+import type {MarketAsset, MarketResult} from '../../models';
 
-export interface MarketResult {
-    /** Normalized market assets returned by a provider adapter. */
-    data: MarketAsset[];
+export type {MarketResult} from '../../models';
 
-    /** True only when the adapter could not return usable market data. */
-    isOffline: boolean;
-
-    /** Client-side timestamp when the adapter completed normalization. */
-    timestamp: number;
-}
-
+/**
+ * Compatibility factory retained for existing rate-service callers.
+ * MarketResult itself is defined centrally in the shared models contract.
+ */
 export function createMarketResult(
     data: MarketAsset[],
     timestamp = Date.now(),
