@@ -4,13 +4,13 @@ export const CRYPTO_DEFAULT_CATALOG: MarketAsset[] = [
     ['bitcoin', 'BTC', 'Bitcoin'],
     ['ethereum', 'ETH', 'Ethereum'],
     ['tether', 'USDT', 'Tether'],
-    ['binancecoin', 'BNB', 'BNB'],
     ['solana', 'SOL', 'Solana'],
+    ['binancecoin', 'BNB', 'BNB'],
     ['ripple', 'XRP', 'XRP'],
-    ['usd-coin', 'USDC', 'USDC'],
-    ['dogecoin', 'DOGE', 'Dogecoin'],
     ['cardano', 'ADA', 'Cardano'],
+    ['dogecoin', 'DOGE', 'Dogecoin'],
     ['avalanche-2', 'AVAX', 'Avalanche'],
+    ['usd-coin', 'USDC', 'USDC'],
 ].map(([id, displaySymbol, name]) => ({
     symbol: id as string,
     id: id as string,
@@ -18,12 +18,10 @@ export const CRYPTO_DEFAULT_CATALOG: MarketAsset[] = [
     name: name as string,
     rate: 0,
     changePct: 0,
-    category: 'crypto',
+    category: 'crypto' as const,
 }));
 
 export const DEFAULT_CRYPTO = [
     'USD',
-    ...CRYPTO_DEFAULT_CATALOG.map(
-        asset => asset.symbol,
-    ),
+    ...CRYPTO_DEFAULT_CATALOG.map(asset => asset.symbol),
 ];
