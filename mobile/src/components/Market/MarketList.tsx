@@ -26,7 +26,7 @@ export function MarketList({data, editable = false, onRateChange, activeSymbol}:
                         changePct: item.changePct,
                         referenceRate: item.referenceRate,
                     }}
-                    editable={editable && item.symbol !== 'USD'}
+                    editable={editable}
                     active={item.symbol === (focusedSymbol ?? activeSymbol)}
                     onChange={v => onRateChange?.(item.symbol, v)}
                     onActivate={() => setFocusedSymbol(item.symbol)}
