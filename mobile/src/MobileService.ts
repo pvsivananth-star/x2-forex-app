@@ -18,7 +18,15 @@ import {
 import {services} from './services/serviceContainer';
 
 
-import {DecimalPlaces, MarketAsset, PersistedSettings, TabCategory, Tenor, ThemePreference} from './models';
+import {
+    DecimalPlaces,
+    MarketAsset,
+    PersistedMarketState,
+    PersistedSettings,
+    TabCategory,
+    Tenor,
+    ThemePreference
+} from './models';
 
 export type {
     DecimalPlaces,
@@ -762,27 +770,6 @@ function materializeActiveCategory(
         category,
     );
 }
-
-/* -------------------------------------------------------------------------- */
-/* Persistence                                                                */
-/* -------------------------------------------------------------------------- */
-
-type PersistedMarketState = {
-    fx?: {
-        symbol: string | null;
-        value: number | null;
-    };
-
-    crypto?: {
-        symbol: string | null;
-        value: number | null;
-    };
-
-    metals?: {
-        symbol: string | null;
-        value: number | null;
-    };
-};
 
 function getCategoryTenor(
     category: Category,
