@@ -1,7 +1,7 @@
 import type {IRateService} from './contracts/IRateService';
 import type {IPersistenceService} from './contracts/IPersistenceService';
 import type {ICatalogService} from './contracts/ICatalogService';
-import {RateService} from './rates/RateService';
+import {RateService} from './rates/rateService';
 import {PersistenceService} from './persistence/PersistenceService';
 import type {StoredMobileState} from './persistence/mobileStateStorage';
 import {CatalogService} from './catalog/CatalogService';
