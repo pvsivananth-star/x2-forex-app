@@ -45,8 +45,6 @@ export interface MarketState {
     isLoading: boolean;
 }
 
-export type PersistedMarketState = Pick<MarketState, 'assets' | 'marketRates' | 'lastSynced'>;
-
 export interface FetchedRate {
     rate: number;
     referenceRate: number;
@@ -74,6 +72,21 @@ export interface PersistedSettings {
     watchlistMetals: string[];
     editedRates: Record<string, number>;
 }
+
+export interface PersistedEditedMarket {
+    symbol: string | null;
+    value: number | null;
+}
+
+export interface PersistedEditedMarkets {
+    fx: PersistedEditedMarket;
+    crypto: PersistedEditedMarket;
+    metals: PersistedEditedMarket;
+}
+
+export type PersistedApplicationState = PersistedSettings & {
+    marketState?: PersistedEditedMarkets;
+};
 
 export interface MarketResult {
     data: MarketAsset[];
