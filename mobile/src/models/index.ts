@@ -21,7 +21,6 @@ export interface MarketAsset {
   country?: string;
 }
 
-// Legacy compatibility: some older modules expect MarketRate with a `value` field
 export interface MarketRate {
   symbol: string;
   name: string;
@@ -46,6 +45,8 @@ export interface MarketState {
   isLoading: boolean;
 }
 
+export type PersistedMarketState = Pick<MarketState, 'assets' | 'marketRates' | 'lastSynced'>;
+
 export interface FetchedRate {
   rate: number;
   referenceRate: number;
@@ -65,12 +66,10 @@ export interface PersistedSettings {
   tenor: Tenor;
   decimalPlaces: DecimalPlaces;
   theme: ThemePreference;
-
   watchlistFx: string[];
   watchlistCrypto: string[];
   watchlistEquity: string[];
   watchlistMetals: string[];
-
   editedRates: Record<string, number>;
 }
 
