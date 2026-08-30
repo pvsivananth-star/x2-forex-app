@@ -135,7 +135,7 @@ export const MobileApplication: React.FC = () => {
                 </ScrollView>
                 {isEditMode && <View style={[styles.editFooter, {backgroundColor: colors.surface, borderTopColor: colors.border}]}><TouchableOpacity onPress={cancelEditing} style={[styles.footerButton, {borderColor: colors.border}]}><Text style={{color: colors.muted, fontWeight: '900'}}>Cancel</Text></TouchableOpacity><TouchableOpacity onPress={() => void applyEditing()} style={[styles.footerButton, {backgroundColor: colors.accentStrong, borderColor: colors.accentStrong}]}><Text style={{color: '#FFFFFF', fontWeight: '900'}}>Apply</Text></TouchableOpacity></View>}
             </>}
-            {!isEditMode && <BottomTabs activeTab={activeTab} onChange={setActiveTab}/>} 
+            {!isEditMode && <BottomTabs activeTab={activeTab} colors={colors} onChange={setActiveTab}/>} 
             <AssetPickerModal visible={pickerOpen} title={`Add ${marketName}`} placeholder={activeTab === 'crypto' ? 'Search Bitcoin, BTC, Ethereum...' : activeTab === 'fx' ? 'Search INR, India, Euro...' : 'Search Gold, Silver, Platinum...'} assets={filteredPickerCatalog} selected={currentWatchlist} search={search} colors={colors} onSearch={setSearch} onSelect={addAsset} onClose={() => setPickerOpen(false)}/>
             <SettingsModal visible={settingsOpen} colors={colors} theme={theme} decimalPlaces={decimalPlaces} onThemeChange={setTheme} onDecimalChange={setDecimalPlaces} onResetMarketDefaults={async () => {await resetMarketDefaults(); setDraftRates({}); setSettingsOpen(false);}} onClose={() => setSettingsOpen(false)}/>
         </SafeAreaView>
