@@ -73,19 +73,23 @@ export interface PersistedSettings {
     editedRates: Record<string, number>;
 }
 
-export interface PersistedEditedMarket {
-    symbol: string | null;
-    value: number | null;
-}
-
-export interface PersistedEditedMarkets {
-    fx: PersistedEditedMarket;
-    crypto: PersistedEditedMarket;
-    metals: PersistedEditedMarket;
+export interface PersistedMarketState {
+    fx: {
+        symbol: string | null;
+        value: number | null;
+    };
+    crypto: {
+        symbol: string | null;
+        value: number | null;
+    };
+    metals: {
+        symbol: string | null;
+        value: number | null;
+    };
 }
 
 export type PersistedApplicationState = PersistedSettings & {
-    marketState?: PersistedEditedMarkets;
+    marketState?: PersistedMarketState;
 };
 
 export interface MarketResult {
