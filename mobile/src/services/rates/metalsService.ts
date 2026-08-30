@@ -42,7 +42,6 @@ export async function fetchMetalsRates(tenor: Tenor): Promise<MarketResult> {
     }));
 
     const mapped = METAL_CATALOG.map(asset => {
-        if (asset.symbol === 'USD') return {...asset, rate: 1, referenceRate: 1, changePct: 0};
         const mapping = METAL_UNITS[asset.symbol];
         const base = mapping ? baseResults[mapping.base] : undefined;
         if (!mapping || !base) return null;
@@ -52,6 +51,9 @@ export async function fetchMetalsRates(tenor: Tenor): Promise<MarketResult> {
         return {...asset, rate: Number(rate.toFixed(8)), referenceRate: Number(referenceRate.toFixed(8)), changePct: percentageChange(rate, referenceRate)};
     });
 
-    const data = mapped.filter(asset => asset !== null) as MarketAsset[];
-    return {data, isOffline: data.filter(asset => asset.symbol !== 'USD').length === 0, timestamp: Date.now()};
+    const data: MarketAsset[] = [
+        {symbol: 'USD', name: 'US Dollar', rate: 1, referenceRate: 1, changePct: 0, category: 'metals'},
+        ...(mapped.filter(asset => asset !== null) as MarketAsset[]),
+    ];
+    return {data, isOffline: data.length === 1, timestamp: Date.now()};
 }

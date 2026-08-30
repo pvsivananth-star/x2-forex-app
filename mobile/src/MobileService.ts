@@ -159,58 +159,55 @@ function allQuotesForActive(tab: TabCategory): Record<string, Quote> {
     return activeCategoryState(tab)?.marketRates ?? {};
 }
 
-function recompute(category: Category, symbol: string, value: number): CategoryState {
+function defaultAnchorFor(category: Category): string | null {
+    if (category === 'fx') return 'USD';
+    if (category === 'crypto') return 'bitcoin';
+    if (category === 'metals') return 'XAU_1OZ';
+    return null;
+}
+
+function scaleToAnchor(category: Category, symbol: string, value: number, markEdited: boolean): CategoryState {
     const current = categoryStates[category];
     const anchor = current.marketRates[symbol];
     if (!anchor || !Number.isFinite(value) || value <= 0 || !Number.isFinite(anchor.rate) || anchor.rate <= 0) return current;
 
     const assets: Record<string, MarketAsset> = {};
+    const inverse = category === 'crypto' || category === 'metals';
 
-    if (category === 'crypto') {
-        if (symbol === 'USD') {
-            Object.entries(current.marketRates).forEach(([itemSymbol, quote]) => {
-                const original = current.assets[itemSymbol];
-                if (!original) return;
-                if (itemSymbol === 'USD') {
-                    assets[itemSymbol] = {...original, rate: value, referenceRate: value, changePct: 0, isCustomEdited: true};
-                } else {
-                    const rate = quote.rate > 0 ? value / quote.rate : 0;
-                    const referenceRate = quote.referenceRate > 0 ? value / quote.referenceRate : 0;
-                    assets[itemSymbol] = {...original, rate, referenceRate, changePct: percentage(rate, referenceRate), isCustomEdited: false};
-                }
-            });
-        } else {
-            const usdValue = value * anchor.rate;
-            const usdReference = value * anchor.referenceRate;
-            Object.entries(current.marketRates).forEach(([itemSymbol, quote]) => {
-                const original = current.assets[itemSymbol];
-                if (!original) return;
-                if (itemSymbol === 'USD') {
-                    assets[itemSymbol] = {...original, rate: usdValue, referenceRate: usdReference, changePct: percentage(usdValue, usdReference), isCustomEdited: false};
-                } else {
-                    const rate = quote.rate > 0 ? usdValue / quote.rate : 0;
-                    const referenceRate = quote.referenceRate > 0 ? usdReference / quote.referenceRate : 0;
-                    assets[itemSymbol] = {...original, rate, referenceRate, changePct: percentage(rate, referenceRate), isCustomEdited: itemSymbol === symbol};
-                }
-            });
-            if (assets[symbol]) {
-                const referenceRate = anchor.rate > 0 ? value * (anchor.referenceRate / anchor.rate) : value;
-                assets[symbol] = {...assets[symbol], rate: value, referenceRate, changePct: percentage(value, referenceRate), isCustomEdited: true};
-            }
-        }
-    } else {
-        const ratio = value / anchor.rate;
-        Object.entries(current.marketRates).forEach(([itemSymbol, quote]) => {
-            const original = current.assets[itemSymbol];
-            if (!original) return;
-            const rate = quote.rate * ratio;
-            const referenceRate = quote.referenceRate * ratio;
-            assets[itemSymbol] = {...original, rate, referenceRate, changePct: percentage(rate, referenceRate), isCustomEdited: itemSymbol === symbol};
-        });
-        if (assets[symbol]) assets[symbol] = {...assets[symbol], rate: value, isCustomEdited: true};
+    Object.entries(current.marketRates).forEach(([itemSymbol, quote]) => {
+        const original = current.assets[itemSymbol];
+        if (!original || !Number.isFinite(quote.rate) || quote.rate <= 0) return;
+        const rate = inverse ? value * anchor.rate / quote.rate : value * quote.rate / anchor.rate;
+        const referenceRate = inverse
+            ? value * anchor.referenceRate / Math.max(quote.referenceRate, Number.EPSILON)
+            : value * quote.referenceRate / anchor.rate;
+        assets[itemSymbol] = {
+            ...original,
+            rate,
+            referenceRate,
+            changePct: percentage(rate, referenceRate),
+            isCustomEdited: markEdited && itemSymbol === symbol,
+        };
+    });
+
+    if (assets[symbol]) {
+        assets[symbol] = {
+            ...assets[symbol],
+            rate: value,
+            isCustomEdited: markEdited,
+        };
     }
 
-    return {...current, assets, editedSymbol: symbol, editedValue: value};
+    return {
+        ...current,
+        assets,
+        editedSymbol: markEdited ? symbol : null,
+        editedValue: markEdited ? value : null,
+    };
+}
+
+function recompute(category: Category, symbol: string, value: number): CategoryState {
+    return scaleToAnchor(category, symbol, value, true);
 }
 
 function materialize(tab: TabCategory): Partial<MobileServiceState> {
@@ -306,8 +303,14 @@ export const useMobileStore = create<MobileServiceState>((set, get) => ({
     clearEditedRate: symbol => {
         const asset = get().assets[symbol];
         if (!asset) return;
-        const current = categoryStates[asset.category];
-        categoryStates[asset.category] = {...current, editedSymbol: null, editedValue: null, assets: cloneAssets(Object.entries(current.marketRates).map(([s, q]) => ({...(current.assets[s] ?? {symbol: s, name: s, category: asset.category, changePct: 0}), rate: q.rate, referenceRate: q.referenceRate, changePct: q.changePct} as MarketAsset)))};
+        const category = asset.category;
+        const defaultAnchor = defaultAnchorFor(category);
+        if (defaultAnchor && categoryStates[category].marketRates[defaultAnchor]) {
+            categoryStates[category] = scaleToAnchor(category, defaultAnchor, 1, false);
+        } else {
+            const current = categoryStates[category];
+            categoryStates[category] = {...current, editedSymbol: null, editedValue: null, assets: cloneAssets(Object.entries(current.marketRates).map(([s, q]) => ({...(current.assets[s] ?? {symbol: s, name: s, category: asset.category, changePct: 0}), rate: q.rate, referenceRate: q.referenceRate, changePct: q.changePct} as MarketAsset)))};
+        }
         set(materialize(get().activeTab));
     },
 
@@ -381,7 +384,14 @@ export const useMobileStore = create<MobileServiceState>((set, get) => ({
                         assets[symbol] = {...original, rate: quote.rate, referenceRate: quote.referenceRate, changePct: quote.changePct, isCustomEdited: false};
                     });
                     categoryStates[category] = {...current, marketRates, assets};
-                    if (current.editedSymbol && current.editedValue !== null) categoryStates[category] = recompute(category, current.editedSymbol, current.editedValue);
+                    if (current.editedSymbol && current.editedValue !== null) {
+                        categoryStates[category] = recompute(category, current.editedSymbol, current.editedValue);
+                    } else {
+                        const defaultAnchor = defaultAnchorFor(category);
+                        if (defaultAnchor && categoryStates[category].marketRates[defaultAnchor]) {
+                            categoryStates[category] = scaleToAnchor(category, defaultAnchor, 1, false);
+                        }
+                    }
                 };
 
                 apply('fx', fx);

@@ -86,7 +86,8 @@ export async function fetchCryptoRates(tenor: Tenor, selectedIds: string[]): Pro
         }));
 
         const data = mapped.filter(asset => asset !== null) as MarketAsset[];
-        return {data, isOffline: data.length === 0, timestamp: Date.now()};
+        data.unshift({symbol: 'USD', name: 'US Dollar', rate: 1, referenceRate: 1, changePct: 0, category: 'crypto'});
+        return {data, isOffline: data.length <= 1, timestamp: Date.now()};
     } catch {
         return {data: [], isOffline: true, timestamp: Date.now()};
     }
