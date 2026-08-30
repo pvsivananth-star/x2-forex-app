@@ -1,11 +1,6 @@
 import {create} from 'zustand';
 
 import {
-    loadMobileState,
-    saveMobileState,
-} from './services/persistence/mobileStateStorage';
-
-import {
     CRYPTO_DEFAULT_CATALOG,
     DEFAULT_CRYPTO,
     DEFAULT_FX,
@@ -20,16 +15,8 @@ import {
     EQUITY_ORDER,
 } from './catalogs/equities';
 
-import {
-    fetchCryptoCatalog,
-} from './services/rates/cryptoCatalogService';
+import {services} from './services/serviceContainer';
 
-import {
-    fetchCryptoForMobileService,
-    fetchEquityForMobileService,
-    fetchFxForMobileService,
-    fetchMetalsForMobileService,
-} from './services/rates/mobileServiceAdapters';
 
 import {DecimalPlaces, MarketAsset, PersistedSettings, TabCategory, Tenor, ThemePreference} from './models';
 
@@ -208,7 +195,7 @@ function categoryForTab(
     }
 
     // Support both legacy 'eq' and the newer 'equity' tab identifiers
-    if (tab === 'eq' || tab === 'equity') {
+    if (tab === 'equity') {
         return 'equity';
     }
 
@@ -901,7 +888,7 @@ async function persistState(
         persistedMarkets,
     };
 
-    await saveMobileState(
+    await services.persistence.save(
         settings,
     );
 }
@@ -1537,7 +1524,7 @@ export const useMobileStore =
                  */
                 const categoryState =
                     getCategoryState(
-                        category,
+                        category === 'portfolio' ? 'fx' : category,
                     );
 
                 if (
@@ -1584,7 +1571,7 @@ export const useMobileStore =
                     );
 
                     setCategoryState(
-                        category,
+                        category === 'portfolio' ? 'fx' : category,
                         {
                             ...categoryState,
 
@@ -1600,7 +1587,7 @@ export const useMobileStore =
 
                     set({
                         ...materializeCategory(
-                            category,
+                            category === 'portfolio' ? 'fx' : category,
                         ),
                     });
                 }
@@ -1771,20 +1758,25 @@ export const useMobileStore =
                         crypto,
                         metals,
                     ] = await Promise.all([
-                        fetchFxForMobileService(
-                            state.tenorFx,
-                        ),
+                        services.rates.refreshRates({
+                            market: 'fx',
+                            tenor: state.tenorFx,
+                        }),
 
-                        fetchEquityForMobileService(),
+                        services.rates.refreshRates({
+                            market: 'equity'
+                        }),
 
-                        fetchCryptoForMobileService(
-                            state.tenorCrypto,
-                            cryptoIds,
-                        ),
+                        services.rates.refreshRates({
+                            market: 'crypto',
+                            tenor: state.tenorCrypto,
+                            symbols: state.watchlistCrypto,
+                        }),
 
-                        fetchMetalsForMobileService(
-                            state.tenorMetals,
-                        ),
+                        services.rates.refreshRates({
+                            market: 'metals',
+                            tenor: state.tenorMetals,
+                        }),
                     ]);
 
                     /*
@@ -2016,7 +2008,7 @@ export const useMobileStore =
                 async () => {
                     try {
                         const catalog =
-                            await fetchCryptoCatalog();
+                            await services.catalog.getItems('crypto');
 
                         if (
                             !catalog.length
@@ -2196,7 +2188,7 @@ export const useMobileStore =
                 async () => {
                     try {
                         const saved =
-                            await loadMobileState();
+                            await services.persistence.load();
 
                         if (saved) {
                             const fx =
