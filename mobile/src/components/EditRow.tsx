@@ -1,0 +1,152 @@
+import React from 'react';
+
+import {Text, TouchableOpacity, View,} from 'react-native';
+import {styles, rowContainer, arrowColor, removeButton, removeText} from './EditRow.styles';
+
+import { MarketAsset } from '../models';
+
+import {AppColors,} from '../theme';
+
+interface EditRowProps {
+    asset: MarketAsset;
+    index: number;
+    count: number;
+    locked?: boolean;
+    colors: AppColors;
+
+    onMove: (
+        index: number,
+        direction: -1 | 1,
+    ) => void;
+
+    onRemove: (
+        symbol: string,
+    ) => void;
+}
+
+export const EditRow: React.FC<
+    EditRowProps
+> = ({
+         asset,
+         index,
+         count,
+         locked,
+         colors,
+         onMove,
+         onRemove,
+     }) => {
+    const displaySymbol =
+        asset.displaySymbol ??
+        asset.symbol;
+
+    const canMoveUp =
+        !locked &&
+        index > 0;
+
+    const canMoveDown =
+        !locked &&
+        index < count - 1;
+
+    return (
+        <View
+            style={rowContainer(colors)}
+        >
+            <View
+                style={styles.arrows}
+            >
+                <TouchableOpacity
+                    disabled={!canMoveUp}
+                    onPress={() =>
+                        onMove(
+                            index,
+                            -1,
+                        )
+                    }
+                    style={styles.arrowButton}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                        `Move ${displaySymbol} up`
+                    }
+                >
+                    <Text
+                        style={arrowColor(canMoveUp, colors)}
+                    >
+                        ↑
+                    </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    disabled={!canMoveDown}
+                    onPress={() =>
+                        onMove(
+                            index,
+                            1,
+                        )
+                    }
+                    style={styles.arrowButton}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                        `Move ${displaySymbol} down`
+                    }
+                >
+                    <Text
+                        style={arrowColor(canMoveDown, colors)}
+                    >
+                        ↓
+                    </Text>
+                </TouchableOpacity>
+            </View>
+
+            <View
+                style={styles.asset}
+            >
+                <Text
+                    style={[
+                        styles.symbol,
+                        {
+                            color:
+                            colors.text,
+                        },
+                    ]}
+                    numberOfLines={1}
+                >
+                    {displaySymbol}
+                </Text>
+
+                <Text
+                    style={[
+                        styles.name,
+                        {
+                            color:
+                            colors.dim,
+                        },
+                    ]}
+                    numberOfLines={1}
+                >
+                    {asset.name}
+                </Text>
+            </View>
+
+            <TouchableOpacity
+                disabled={locked}
+                onPress={() =>
+                    onRemove(
+                        asset.symbol,
+                    )
+                }
+                style={removeButton(locked)}
+                accessibilityRole="button"
+                accessibilityLabel={
+                    `Remove ${displaySymbol}`
+                }
+            >
+                <Text
+                    style={removeText(colors)}
+                >
+                    −
+                </Text>
+            </TouchableOpacity>
+        </View>
+    );
+};
+

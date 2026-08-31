@@ -1,421 +1,290 @@
-# X2 Forex App — Cleanup Action Plan
+# X2 Cleanup Action Plan
 
 ## Baseline
 
-All cleanup work starts from the known-good baseline:
+Working branch: `cleanup/fix-architecture`
 
-```text
-230aa4663a1083428db8bcc756697e340fa29122
-refactor: create consolidated application service
-```
+Known-good baseline: `230aa4663a1083428db8bcc756697e340fa29122` (`refactor: create consolidated application service`).
 
-Working branch:
+All cleanup work must preserve established behavior unless a requirement explicitly changes it. Do not reuse the abandoned `cleanup/services-consolidation` implementation.
 
-```text
-cleanup/fix-architecture
-```
+**Status: DONE** — baseline restored and cleanup is being performed from `cleanup/fix-architecture`.
 
-Do not carry forward experimental changes from `cleanup/services-consolidation`.
+## Phase 0 — Guard the baseline
 
-## Objective
+- Confirm the branch starts from the known-good commit.
+- Run the existing build/tests before architectural changes.
+- Record current behavior for market calculation, refresh, navigation, persistence and screen rendering.
+- No functional redesign during this phase.
 
-Clean the application without changing established working behavior unnecessarily.
+**Status: DONE** — baseline and existing behavior were reviewed before service-boundary cleanup.
 
-The cleanup must reduce coupling and make services/providers replaceable without requiring caller changes.
+## Phase 1 — Establish application service boundaries
 
-The application caller must depend on contracts/capabilities, not concrete providers.
+Create stable application-facing contracts before extracting implementations.
+
+Initial contracts, only where required:
+
+- `IRateService`
+- `IPersistenceService`
+- `ICatalogService`
+- `ISettingsService`
+
+Rules:
+
+- Callers depend only on contracts.
+- Callers must not know CoinGecko, Yahoo, Frankfurter, MMKV, AsyncStorage, HTTP clients or other implementation details.
+- Do not create provider-named application services.
+- Concrete implementations are selected at one composition/wiring point.
+- Replacing a provider should not require caller changes.
 
 Example:
 
 ```text
-Crypto screen
-    ↓
-IRateService
-    ↓
-RateService
-    ↓
-IRateProvider
-    ↓
-configured Crypto provider
+Screen / MobileService
+        |
+        v
+    IRateService
+        |
+        v
+    RateService
+        |
+        v
+   IRateProvider
+      /    \
+ CoinGecko  Yahoo
 ```
 
-The Crypto caller must not know whether the provider is CoinGecko, CoinCap, or another implementation. The same rule applies to FX, Metals, EQ, persistence, catalogs, and future services.
+The exact provider mapping is implementation/configuration, not a caller concern.
 
-## Phase 0 — Protect the baseline
+**Status: DONE** — application-facing rate, persistence and catalog boundaries/composition were established and callers use the application contracts.
 
-### 0.1 Verify baseline behavior
+## Phase 2 — Persistence boundary
 
-Before refactoring:
+After the contracts exist:
 
-- compile the mobile application;
-- run existing tests/checks;
-- verify navigation;
-- verify FX display and editing;
-- verify Crypto display;
-- verify Metals display;
-- verify EQ/navigation state currently present at baseline;
-- verify refresh and offline/cache behavior.
+1. Identify every persistence responsibility currently owned by `MobileService.ts`.
+2. Move only persistence operations behind `IPersistenceService`.
+3. Preserve existing persisted data formats and keys unless migration is explicitly required.
+4. Keep market calculations, refresh orchestration and UI state out of the persistence implementation.
+5. Verify every caller before removing old paths.
 
-Record failures before making architectural changes.
+Do not solve production encryption in this phase.
 
-### 0.2 No functional redesign during service cleanup
+**Status: DONE** — persistence responsibilities were consolidated behind the persistence service boundary while preserving the existing persisted-state model.
 
-Do not combine provider replacement, calculation redesign, UI redesign, or persistence encryption with service-boundary work unless required by the contract migration.
+## Phase 3 — Rate service and provider adapters
 
-## Phase 1 — Establish application service contracts
+- Identify the current working rate implementation from the baseline.
+- Wrap/adapt it instead of rewriting it.
+- Normalize provider responses before application state consumes them.
+- Keep FX, Crypto, Metals and EQ category state independent.
+- Provider selection belongs in the composition point.
 
-Create small, capability-oriented interfaces/contracts.
+### Rate calculation invariant
 
-Initial boundaries:
+Keep the existing central calculation utility and its behavioral contract.
+
+For each market category, the underlying snapshot is immutable and USD is an independent anchor. User edits are display/calculation state and must not mutate the provider snapshot.
+
+For a USD-relative base-rate set:
+
+`converted = amount / fromRate * toRate`
+
+Only the edited anchor value changes. Other underlying USD-relative rates remain unchanged; cross-rates are derived from the updated anchor.
+
+**Status: DONE** — `RateService` is the application-facing boundary, provider-specific adapters were removed from the caller path, and provider results are normalized centrally before application state consumes them. TypeScript validation is clean.
+
+## Phase 4 — Refresh/event-flow audit
+
+Trace and document:
 
 ```text
-IRateService
-IPersistenceService
-ICatalogService
-ISettingsService
+refresh request
+  -> rate service
+  -> provider
+  -> normalize
+  -> market snapshot
+  -> cache
+  -> state notification
+  -> table/screen render
 ```
 
-Where needed, introduce provider-level contracts:
+Verify:
 
-```text
-IRateProvider
-IPersistenceProvider
-```
+- refresh updates the correct category only;
+- failed refresh preserves valid cache;
+- table receives the updated state through one event path;
+- no duplicate table/input implementations remain;
+- active edits behave according to the existing requirements.
 
-Rules:
+Do not change calculation formulas while performing this audit.
 
-- interfaces describe application capabilities, not technologies;
-- no `ICoinGeckoService`, `IYahooService`, `IAsyncStorageService`, etc.;
-- callers never select providers;
-- contracts should remain small and stable.
+**Status: DONE** — refresh flow was audited end-to-end. Category isolation, cache preservation on failed refresh, and the single state/render path were verified. No calculation formulas were changed.
 
-## Phase 2 — Create one composition/wiring point
+## Phase 5 — State architecture audit
 
-Create a single service composition point where concrete implementations are selected.
+Audit `settingsStore`, `watchlistStore` and other V2 state scaffolding.
 
-Conceptually:
+For every store:
 
-```text
-container
-  rateService        → latest RateService implementation
-  persistenceService → latest PersistenceService implementation
-  catalogService     → latest CatalogService implementation
-  settingsService    → latest SettingsService implementation
-```
+1. Find all callers.
+2. Identify overlapping state in `MobileService`.
+3. Decide the single source of truth.
+4. Migrate callers.
+5. Remove only proven-dead scaffolding.
 
-Provider selection remains inside the service/provider implementation or configuration.
+Never delete a store solely because it appears unused without checking imports, navigation, persistence and indirect consumers.
 
-Changing the provider should not require changes to screens or application callers.
+**Status: DONE** — `settingsStore` and `watchlistStore` callers were audited; no active callers or actionable duplicate store ownership remained. No unnecessary replacement store was introduced.
 
-## Phase 3 — Adapt existing working services
+## Phase 6 — Screen/navigation consolidation
 
-Do not rewrite working services merely to introduce interfaces.
-
-Wrap/adapt the current implementations behind the new contracts.
-
-Migration rule:
-
-```text
-existing implementation
-        ↓
-contract adapter if required
-        ↓
-application caller
-```
-
-First preserve behavior, then simplify implementation where safe.
-
-## Phase 4 — Rate-service/provider boundary
-
-Centralize market-data acquisition behind `IRateService`.
-
-Target flow:
-
-```text
-Screen/Application
-        ↓
-IRateService
-        ↓
-RateService
-        ↓
-IRateProvider
-        ↓
-provider adapter
-        ↓
-external API/WebSocket
-```
-
-Provider-specific parsing, transport, errors, retries, and endpoint details remain below the boundary.
-
-Market categories remain independent at the state/calculation level.
-
-### Required invariant
-
-```text
-FX USD state      independent
-Crypto USD state  independent
-Metals USD state  independent
-```
-
-Do not use one mutable global asset namespace as the source of truth for multiple market categories.
-
-## Phase 5 — Preserve the calculation contract
-
-Use the baseline calculation behavior as the reference.
-
-For USD-normalized rates:
-
-```text
-convertedValue = amount / fromRate * toRate
-```
-
-Maintain an immutable market/API snapshot during editing.
-
-Only one active edit is allowed.
-
-An edit must never mutate the API snapshot or become the next calculation baseline.
-
-This phase is a refactoring/contract phase, not an invitation to redesign the calculation algorithm.
-
-Required behavior tests:
-
-- edit USD and verify all other values recalculate;
-- edit a non-USD currency and verify cross-rates recalculate;
-- switching edited currency clears the previous edit;
-- edited value remains exactly what the user entered;
-- refresh does not leak state across markets;
-- FX, Crypto, and Metals USD values are independent.
-
-## Phase 6 — Persistence boundary
-
-Move persistence access behind `IPersistenceService`.
-
-Application services should not directly depend on storage technology.
+Identify parallel implementations in `MobileApplication.tsx`, `screens/*`, `components/*` and legacy/V2 paths.
 
 Target:
 
 ```text
-MobileService
-    ↓
-IPersistenceService
-    ↓
-latest persistence implementation
-    ↓
-MMKV / storage provider
+Navigator
+   -> one screen implementation
+      -> shared components
+         -> application contracts/state
 ```
 
-The concrete implementation is selected at the composition point.
+Do not create another screen architecture. Reuse existing working components where possible.
 
-Do not implement production encryption in this phase.
+**Status: DONE** — active UI composition was audited. `MobileApplication.tsx` is the active screen composition path, shared components are reused, and no legacy `./screens` caller was found. No speculative UI rewrite was made.
 
-## Phase 7 — Dead V2 state audit
+## Phase 7 — EQ consistency
 
-Audit all state stores and state scaffolding before deleting anything.
+EQ replaces the previous Index user-facing page.
 
-Candidates include:
+EQ is display-only:
 
-- `settingsStore`
-- `watchlistStore`
-- other V2 state modules
+- no editable rates;
+- no add/remove controls;
+- no calculator;
+- deterministic US-first ordering;
+- reuse existing country/index configuration;
+- provider data is normalized before UI consumption.
 
-For every candidate:
+EQ must use the same service boundary, refresh, cache, status and theme conventions without inheriting Forex editing/anchor logic.
 
-1. find all imports/callers;
-2. identify whether it is authoritative or compatibility code;
-3. compare with `MobileService` state;
-4. migrate callers if required;
-5. remove only after zero required callers remain;
-6. compile/test.
+**Status: DONE** — EQ uses the common rate-service boundary and refresh/cache conventions, has its own provider normalization and ordering, and remains display-only without FX anchor/editing behavior.
 
-Never delete based only on filename or apparent duplication.
+## Phase 8 — Compatibility cleanup
 
-## Phase 8 — Screen and component architecture
+Audit `types.ts` and all legacy compatibility imports.
 
-Identify and eliminate parallel UI implementations.
+Only after all callers use `models`/current contracts:
 
-Target:
+- remove compatibility exports;
+- compile;
+- run tests;
+- verify no generated/runtime path still imports the facade.
 
-```text
-Screen
-  ↓
-application/state boundary
-  ↓
-shared market/table components
-```
+**Status: PENDING**
 
-There must be one coherent table/input event path for market-rate screens.
+## Phase 9 — Large-file cleanup
 
-Do not maintain old and V2 versions of the same behavior indefinitely.
+Refactor `MobileService.ts` and `MobileApplication.tsx` only after service boundaries and state ownership are established.
 
-Shared components should own reusable presentation behavior. Screens should compose screen-specific data and presentation.
+Each extraction must have one responsibility and preserve behavior.
 
-## Phase 9 — EQ consistency
+Do not use file size alone as justification for moving logic.
 
-EQ is display-only.
+**Status: PENDING**
 
-Requirements:
+## Phase 10 — Production persistence/security
 
-- EQ replaces the old Index user-facing concept;
-- no edit/add/remove/customize controls for indices;
-- normalized `EquityIndex` model;
-- existing country/index configuration is reused;
-- US indices appear first;
-- unavailable instruments are omitted rather than fabricated;
-- EQ provider details remain behind the service boundary.
-
-EQ must not inherit Forex/Crypto editable-anchor behavior.
-
-## Phase 10 — Catalog/configuration consolidation
-
-Keep one source of truth for each catalog/configuration domain.
-
-Do not create duplicate market lists or provider-specific configuration in screens.
-
-Required default behavior from the architecture:
-
-- FX: configured default 10, user add/remove/reorder;
-- Crypto: all available supported provider data, with BTC as the default where available;
-- Metals: configured supported metals;
-- EQ: configured indices with deterministic US-first ordering.
-
-Note: the original requirements document says Crypto default Top 10, while Architecture V2 explicitly removes the artificial Top-10 limitation. The consolidated architecture adopts the V2 decision: consume all available supported crypto data and do not hardcode a Top-10 display limit.
-
-## Phase 11 — Compatibility cleanup
-
-Audit compatibility facades such as `types.ts`.
-
-Migration order:
-
-```text
-find imports
-   ↓
-migrate to canonical models
-   ↓
-compile/test
-   ↓
-remove compatibility facade
-```
-
-No compatibility file is deleted until all callers are verified.
-
-## Phase 12 — Large-file cleanup
-
-After service boundaries and caller migrations are stable, reduce responsibility in:
-
-```text
-mobile/src/MobileService.ts
-mobile/src/MobileApplication.tsx
-```
-
-The goal is not simply smaller files. Each responsibility should have one clear owner.
-
-Potential responsibilities to extract include:
-
-- service wiring
-- persistence access
-- market data orchestration
-- settings
-- watchlist management
-- navigation/application composition
-
-Do not split code merely by line count.
-
-## Phase 13 — Production persistence/security
-
-Separate phase after the functional architecture is stable.
+Separate from functional cleanup.
 
 Evaluate:
 
-- encrypted persistence implementation;
-- key management;
-- sensitive data handling;
-- migration from existing persisted state;
-- failure/recovery behavior.
+- encryption provider;
+- secure key handling;
+- migration of existing persisted data;
+- failure/recovery behavior;
+- platform-specific storage security.
 
-The application continues to depend only on `IPersistenceService`.
+No credentials or secrets belong in source control.
 
-## Phase 14 — Final verification
+**Status: PENDING**
 
-Run the full validation set only after architecture cleanup:
+## Phase 11 — Final verification
 
-### Build
+Run, at minimum:
 
-- TypeScript compile;
-- iOS build;
-- Expo/runtime startup.
+- TypeScript/build validation;
+- unit tests;
+- navigation verification;
+- persistence/load-save verification;
+- offline/cache verification;
+- refresh verification;
+- FX edit/cross-rate verification;
+- Crypto and Metals isolation verification;
+- EQ display-only verification;
+- iOS runtime verification.
 
-### Market behavior
+### Required market regression cases
 
-- FX calculation;
-- Crypto loading;
-- Metals loading;
-- EQ display/order;
-- independent market state;
-- refresh;
-- offline/cache fallback;
-- editing behavior where supported.
+- Editing FX USD changes all FX displayed values without changing other FX underlying rates.
+- Editing another FX currency makes it the sole active edit.
+- Switching edited currencies clears the previous edit.
+- Crypto USD is independent of FX USD.
+- Metals USD is independent of FX and Crypto USD.
+- Refreshing FX cannot overwrite Crypto or Metals state.
+- A failed refresh does not erase valid cached data.
+- No provider name is referenced by market screens as an implementation dependency.
 
-### Architecture
+**Status: PENDING**
 
-- screens do not import provider implementations;
-- application services depend on contracts;
-- provider selection occurs at the composition boundary;
-- persistence implementation is replaceable;
-- no duplicate table/event implementation;
-- no dead state scaffolding;
-- no unnecessary compatibility facade.
+## Execution rules
 
-## Commit Strategy
+1. One architectural change at a time.
+2. Verify before and after each phase.
+3. Commit each coherent phase separately.
+4. Do not combine provider changes with state changes.
+5. Do not rewrite working calculation logic while consolidating services.
+6. Do not delete compatibility/state code until callers are proven migrated.
+7. Keep `230aa46` as the behavioral baseline.
+8. If a change causes a regression, revert that change rather than layering another fix on top.
 
-Keep commits small and independently understandable.
-
-Recommended sequence:
+## Current priority
 
 ```text
-1. establish contracts
-2. add composition point
-3. adapt existing services
-4. migrate callers
-5. persistence boundary
-6. state audit/removal
-7. screen consolidation
-8. EQ consistency
-9. compatibility cleanup
-10. large-file cleanup
-11. security review
-12. final verification
+230aa46 baseline                         DONE
+      |
+      v
+Service contracts + composition point   DONE
+      |
+      v
+Persistence boundary                    DONE
+      |
+      v
+Rate/provider boundary                  DONE
+      |
+      v
+Refresh/event-flow audit                DONE
+      |
+      v
+State cleanup                           DONE
+      |
+      v
+Screen/navigation consolidation         DONE
+      |
+      v
+EQ consistency                          DONE
+      |
+      v
+Compatibility cleanup                   NEXT
+      |
+      v
+Large-file cleanup                      PENDING
+      |
+      v
+Production persistence/security         PENDING
+      |
+      v
+Final build/runtime audit               PENDING
 ```
-
-Each commit should compile and preserve working behavior where practical.
-
-## Non-goals
-
-During this cleanup, do not:
-
-- change market providers without a requirement;
-- redesign the calculation algorithm without evidence;
-- redesign the UI unnecessarily;
-- introduce duplicate service abstractions;
-- add API keys;
-- fabricate market data;
-- make callers aware of provider names;
-- make persistence technology a caller dependency;
-- combine unrelated architectural migrations into one large change.
-
-## Definition of Done
-
-Cleanup is complete when:
-
-1. application callers depend on stable contracts;
-2. concrete services are selected in one composition point;
-3. provider choice is invisible to callers;
-4. FX/Crypto/Metals state is independent;
-5. calculation has one authoritative implementation;
-6. refresh has one predictable event flow;
-7. persistence is replaceable;
-8. duplicate state/UI paths are removed after caller verification;
-9. EQ follows display-only rules;
-10. compatibility shims are removed where no longer needed;
-11. large files have clear responsibilities;
-12. existing working behavior is preserved;
-13. build and runtime verification pass.

@@ -1,345 +1,187 @@
 # X2 Forex App — Architecture
 
-## 1. Purpose
+## Purpose
 
-X2 is a zero-backend React Native / Expo mobile application for reliable market information across Forex, Crypto, Metals, EQ (Equity Markets), Charts, and Portfolio.
+X2 is a zero-backend React Native/Expo mobile market application for Forex, Crypto, Metals, Equity Markets (EQ), Charts and Portfolio.
 
-The architecture prioritizes:
+The architecture prioritizes reliable market data, simple presentation, fast loading, offline resilience, consistent UI, minimal API usage, clear separation between market categories, and provider independence.
 
-- reliable market data
-- simple, fast presentation
-- minimal API usage
-- offline resilience
-- clear separation between market categories
-- provider independence
-- centralized calculation and normalization
-- replaceable service implementations
-- preservation of established working behavior
+## Core principles
 
-The repository is the source of truth. Existing behavior, services, dependencies, APIs, and configuration must be inspected before changes. Do not introduce parallel implementations when an existing capability can be reused.
+1. The repository and established working behavior are the source of truth.
+2. Application callers depend on stable contracts, not concrete implementations.
+3. Concrete services/providers are selected at one composition point.
+4. Provider-specific HTTP/API details never reach screens or application callers.
+5. Forex, Crypto, Metals and EQ have independent category state.
+6. Each market category has its own USD anchor/state; FX.USD, Crypto.USD and Metals.USD are distinct values.
+7. Pure calculation logic remains independent of providers, persistence and UI.
+8. Do not introduce parallel implementations when an existing service/component can be adapted.
 
-## 2. Core Principles
-
-### 2.1 Application depends on contracts, not implementations
-
-Callers must not know which concrete service or external provider supplies data.
+## Service and provider boundaries
 
 ```text
-Screen / Application
-        |
-        v
- Application Contract
-        |
-        v
- Service implementation
-        |
-        v
- Provider / storage adapter
+UI / Application
+      |
+      v
+Application contracts
+      |
+      v
+Service implementations
+      |
+      v
+Provider / storage adapters
+      |
+      v
+External systems
 ```
 
-For example, Crypto may use CoinGecko while Forex uses Yahoo or another provider. Changing either provider must not require changes in screens or application callers.
+Core contracts include, where applicable:
 
-### 2.2 Provider independence
+- `IRateService`
+- `IPersistenceService`
+- `ICatalogService`
+- `ISettingsService`
 
-Provider-specific HTTP, SDK, authentication, response parsing, retry, and error handling belong behind provider adapters.
+Interfaces represent application capabilities, not technologies. Avoid exposing `IAsyncStorageService`, `ICoinGeckoService`, etc. to application callers.
 
-```text
-Application
-    |
-    v
-IRateService
-    |
-    v
-RateService
-    |
-    +--> IRateProvider --> Crypto provider adapter --> CoinGecko
-    |
-    +--> IRateProvider --> FX provider adapter     --> Yahoo / Frankfurter / ER-API
-    |
-    +--> IRateProvider --> Metals provider adapter --> configured provider
-    |
-    +--> IRateProvider --> EQ provider adapter     --> configured provider
-```
-
-The names of providers are implementation details, not application dependencies.
-
-### 2.3 One composition point
-
-Concrete implementations are selected in one composition/wiring location. Replacing a service or provider should normally require changing only the wiring/configuration, not callers.
-
-### 2.4 Market categories are independent
-
-Forex, Crypto, Metals, and EQ have separate market requirements and state. A value named USD in one category must never implicitly share mutable state with USD in another category.
-
-Conceptually:
-
-```text
-FX      -> FX market snapshot / calculation state
-Crypto  -> Crypto market snapshot / calculation state
-Metals  -> Metals market snapshot / calculation state
-EQ      -> EQ market snapshot / display state
-```
-
-## 3. Application Service Boundaries
-
-The application should use stable contracts such as:
+The composition root is the single place that selects the current implementations. For example, Crypto may use CoinGecko while FX uses Yahoo or another provider. Replacing either provider must not require changes to screens or application callers.
 
 ```text
 IRateService
-IPersistenceService
-ICatalogService
-ISettingsService
+    |
+    +-- Forex -> provider adapter
+    +-- Crypto -> provider adapter
+    +-- Metals -> provider adapter
+    +-- EQ -> provider adapter
 ```
 
-Services expose application capabilities, not provider-specific operations.
+Provider adapters normalize external responses before application state consumes them.
 
-Bad:
-
-```text
-coinGeckoService.getRates()
-yahooService.getRates()
-asyncStorage.getItem()
-```
-
-Preferred:
-
-```text
-rateService.getRates(market)
-persistenceService.loadState()
-persistenceService.saveState(state)
-```
-
-### 3.1 Rate service
-
-`IRateService` is responsible for obtaining normalized market data and coordinating refresh behavior. It must not expose provider-specific details to callers.
-
-### 3.2 Persistence service
-
-`IPersistenceService` owns application persistence. The application must not depend directly on AsyncStorage, MMKV, SQLite, SecureStore, or encryption details.
-
-### 3.3 Catalog service
-
-Catalog definitions remain centralized and reusable. Do not create duplicate catalog/configuration systems for the same market.
-
-### 3.4 Settings service
-
-Application settings are accessed through a stable boundary so the storage mechanism can change independently.
-
-## 4. Market Data Flow
+## Market data flow
 
 ```text
 External Provider
-       |
-       v
+      |
+      v
 Provider Adapter
-       |
-       v
+      |
+      v
 Normalized Market Data
-       |
-       v
-Immutable Market Snapshot
-       |
-       +------> Cache / Persistence
-       |
-       v
-Market State
-       |
-       v
-Screens / Components
+      |
+      v
+Market Snapshot
+      |
+      +----> Cache
+      |
+      v
+Category State
+      |
+      v
+Screen / Table
 ```
 
-Screens must not contain provider-specific HTTP logic.
+A successful fetch updates the market snapshot and cache. A failed fetch must not destroy valid cached data.
 
-A failed request must not destroy valid cached data.
-
-Expected service result should be predictable, conceptually:
+## Refresh flow
 
 ```text
-{
-  data,
-  isOffline,
-  error?
-}
+User refresh / scheduled tick
+          |
+          v
+IRateService.refresh(...)
+          |
+          v
+Validate / normalize
+          |
+      +---+---+
+      |       |
+   success  failure
+      |       |
+      v       v
+ snapshot   retain valid cache
+ cache      mark unavailable
+      |
+      v
+ notify state
+      |
+      v
+ UI re-render
 ```
 
-No market value may be fabricated. If live data is unavailable, valid cached data may be displayed with the appropriate offline state.
+Refreshing one market category must never overwrite another category's state.
 
-## 5. Market Calculation Architecture
+## Rate calculation
 
-Calculation is a pure domain capability and must remain separate from provider access.
-
-For USD-normalized rates:
+Calculation is a pure domain concern. Rates are normalized against USD inside each category.
 
 ```text
 baseRates = {
-  USD: 1,
-  EUR: 0.85,
-  JPY: 155.5,
-  GBP: 0.75
+    USD: 1,
+    EUR: 0.92,
+    GBP: 0.79,
+    JPY: 155.5
 }
+
+convert(amount, from, to)
+    = amount / baseRates[from] * baseRates[to]
 ```
 
-Conversion is:
+The API market snapshot is immutable. User edits never overwrite it.
+
+Only one currency/rate may be actively edited at a time. When a row is edited, displayed values are recalculated from the unchanged market snapshot. Switching the edited row clears the previous edit; edits never cascade into the next calculation.
+
+Example: if EUR changes from 0.85 to 0.80 relative to USD, only the EUR anchor changes. JPY and GBP underlying USD-relative values remain unchanged; displayed cross-rates involving EUR are derived from the updated EUR value.
+
+The central calculation utility is the only implementation of the conversion formula.
+
+## Category architecture
 
 ```text
-convertedValue = amount / baseRates[from] * baseRates[to]
+FX
+  marketSnapshot
+  displayedRates
+  activeEdit
+  USD anchor
+
+Crypto
+  marketSnapshot
+  displayedRates
+  activeEdit where required
+  independent USD anchor
+
+Metals
+  marketSnapshot
+  displayedRates
+  interaction state as required
+  independent USD anchor
+
+EQ
+  marketSnapshot
+  displayedData
+  no edit state
 ```
 
-For an edit, only the selected market's derived anchor value changes. The original API snapshot remains immutable.
+There must be no shared mutable USD value across categories.
 
-Example:
+## Forex
 
-```text
-USD = 1
-EUR = 0.85
-JPY = 155.5
-GBP = 0.75
-```
+Forex is the primary currency conversion experience. It supports the configured default currency set, user add/remove/reorder, editable values, one active edit, USD-based underlying rates, immutable market snapshots and centralized cross-rate calculation.
 
-Editing USD to `2` changes the displayed values in that market but does not mutate the underlying API snapshot.
+The default watchlist configuration and user watchlist state are separate from provider market data.
 
-Editing EUR to `2` makes EUR the sole active edited currency and recalculates every other value from the original snapshot.
+## Crypto
 
-There is only one active edit at a time.
+Crypto is a market display with USD-quoted prices and BTC as the default cryptocurrency where available. The architecture does not artificially restrict results to a fixed Top-10 list; the available universe is governed by the configured provider/catalog and application requirements.
 
-### 5.1 Market isolation
+Crypto state and USD are independent from Forex.
 
-Each market category owns its own snapshot and calculation state:
+## Metals
 
-```text
-FX.baseRates
-Crypto.baseRates
-Metals.baseRates
-```
+Metals are a dedicated market category including supported precious metals such as Gold, Silver, Platinum and Palladium. Provider retrieval and unit conversion belong behind service/provider boundaries. Metals state and USD are independent from Forex and Crypto.
 
-Therefore:
+## EQ — Equity Markets
 
-```text
-FX.USD != Crypto.USD != Metals.USD
-```
-
-They may all numerically start at `1`, but they are independent application state.
-
-### 5.2 No cascading edits
-
-User-entered values must never become the new API baseline.
-
-```text
-API snapshot
-    |
-    +--> edit USD
-    +--> edit EUR
-    +--> edit GBP
-```
-
-Every edit is calculated against the same immutable market snapshot until live data is refreshed or the edit is explicitly cleared.
-
-## 6. Refresh Event Flow
-
-Refresh is a market-data operation, not a UI-specific calculation operation.
-
-```text
-User / timer
-     |
-     v
-IRateService.refresh(market)
-     |
-     v
-Provider adapter
-     |
-     v
-Validate response
-     |
-     +---- failure ---> preserve valid snapshot/cache + offline/error state
-     |
-     v
-Replace market snapshot
-     |
-     v
-Update cache
-     |
-     v
-Recalculate active display if required
-     |
-     v
-Notify market state subscribers
-     |
-     v
-Table / screen re-render
-```
-
-Refresh for one market must not mutate another market's state.
-
-Force refresh/resync clears manual overrides where required by the finalized product interaction model.
-
-## 7. UI and Screen Architecture
-
-Primary navigation:
-
-```text
-Forex | Crypto | Metals | EQ | Charts | Portfolio
-```
-
-Each market screen consumes normalized application data through the service/state boundary.
-
-Shared visual behavior belongs in reusable components:
-
-```text
-components/
-  Header
-  MarketStatus
-  Refresh
-  MarketCard / RateTable
-  Theme
-```
-
-There must be one coherent table/input event path. Duplicate legacy and V2 table implementations must not coexist indefinitely.
-
-## 8. Forex
-
-Forex is the primary currency conversion experience.
-
-Requirements:
-
-- configured default currency set
-- 10 default currencies
-- user add/remove/reorder
-- editable values
-- one active edited currency
-- USD-normalized underlying rates
-- immutable API snapshot
-- centralized cross-rate calculation
-
-Editing USD or any other currency affects only the FX market state.
-
-## 9. Crypto
-
-Crypto is a market display using USD as the fixed quote currency.
-
-- BTC is the default cryptocurrency where available.
-- Crypto data comes from the configured provider through the rate/provider boundary.
-- The architecture supports all available cryptocurrencies returned by the provider, subject to provider/API limitations.
-- The caller must not know whether the provider is CoinGecko, CoinCap, or another implementation.
-- Crypto state and Crypto USD are independent from FX and Metals.
-
-## 10. Metals
-
-Metals are a dedicated market category including Gold, Silver, Platinum, and Palladium where supported.
-
-Provider-specific implementation remains behind the service boundary.
-
-Metals state and Metals USD are independent from FX and Crypto.
-
-## 11. EQ — Equity Markets
-
-EQ replaces the previous Index page and is display-only.
-
-There is no:
-
-- rate editing
-- add/remove market UI
-- calculator
-- user-customized index ordering
+EQ replaces the previous Index page and is display-only: no editing, add/remove controls, calculator or user-customized index ordering.
 
 US indices appear first, followed by major global markets. Existing country/index configuration should be reused rather than duplicated.
 
@@ -347,149 +189,66 @@ Normalized model:
 
 ```text
 EquityIndex {
-  id
-  symbol
-  name
-  country
-  value
-  change?
-  changePercent?
-  timestamp?
+    id
+    symbol
+    name
+    country
+    value
+    change?
+    changePercent?
+    timestamp?
 }
 ```
 
-Unavailable provider instruments are omitted; fabricated values are prohibited.
+Unavailable provider instruments are omitted; fabricated prices are never allowed.
 
-## 12. Caching and Persistence
+## Navigation
 
-Market data is cached locally for offline resilience.
+Primary navigation:
 
-The existing cache architecture should be reused and extended rather than replaced with unrelated storage systems.
+`Forex | Crypto | Metals | EQ | Charts | Portfolio`
 
-Conceptually:
+The existing navigator remains the central registration point. EQ is the user-facing name for Equity Markets. No second navigation layer should be introduced.
 
-```text
-Network success
-     |
-     v
-Normalize
-     |
-     v
-Update market snapshot
-     |
-     v
-Persist cache
-```
+## Screen and component architecture
 
-On failure:
+Screens compose data and reusable components. Shared visual behavior belongs in shared components. There should be one authoritative table/list interaction path for editable market tables; legacy and V2 duplicates are removed only after callers and behavior are verified.
 
-```text
-Valid cache
-   |
-   v
-Display cached data
-   |
-   v
-Offline status
-```
+All primary market screens use the common header where applicable. Connection status is represented by a small accessible status indicator: green for live/connected and red for offline/unavailable. The word `LIVE` is not displayed beside it.
 
-Persistence must be behind `IPersistenceService`. The concrete implementation may use MMKV or another mechanism without changing callers.
+## Persistence and offline behavior
 
-## 13. Theme and Precision
+Application code depends on `IPersistenceService`, not directly on MMKV, AsyncStorage, SecureStore, SQLite or files.
 
-Theme is centralized. New screens use the common theme context and semantic colors.
+Market cache records retain data and timestamp. On refresh failure, valid cached data remains available and the UI indicates the unavailable/offline state.
 
-Precision is centrally controlled and may be overridden only where market-specific accuracy requires it.
+The existing storage/cache mechanism should be extended rather than replaced by unrelated persistence systems.
 
-## 14. Charts and Portfolio
+## Theme and precision
 
-Charts and Portfolio remain separate capabilities.
+Theme context is the centralized source for semantic colors, dark/light mode and precision. New components use the theme rather than independent hardcoded visual systems. Provider-specific precision may override generic display precision when required for accuracy.
 
-They may consume normalized market data but must not couple their internal state to Forex, Crypto, Metals, or EQ presentation state.
+## Charts and Portfolio
 
-## 15. Accessibility and Visual Consistency
+Charts remain an independent analytical experience and consume normalized market data. Portfolio remains separate from market-screen presentation and may consume normalized market data without coupling to Forex, Crypto, Metals or EQ.
 
-Interactive controls have meaningful accessibility labels.
+## Data integrity and accessibility
 
-Live/connection state uses a small status indicator. The indicator must not rely only on color for accessibility.
+Never fabricate market prices. If current data is unavailable, use valid cache; if no valid cache exists, show an unavailable state.
 
-Primary market screens use a consistent financial-market visual language and centralized theme.
+Interactive controls require meaningful accessibility labels. Status must not rely exclusively on color.
 
-## 16. Performance
+## Performance
 
-Priorities:
+Prefer minimal provider calls, reuse fetched data, caching, normalized data, efficient lists, avoiding unnecessary re-renders and avoiding duplicate requests. A provider request may serve multiple consumers when appropriate, while category state remains independent.
 
-- minimal API calls
-- reuse fetched data
-- caching
-- efficient list rendering
-- avoid unnecessary re-renders
-- avoid duplicate provider requests
-- avoid requesting the same underlying data separately for every consumer when one provider request can supply it
+## Change rules
 
-## 17. Security
+When replacing an implementation:
 
-No API keys are required by the application architecture. Credentials, where ever required by a future provider, remain outside source code.
-
-Persistence encryption is a separate implementation concern and must be introduced behind the persistence contract rather than leaking into application callers.
-
-## 18. Architecture Rules
-
-1. Repository is the source of truth.
-2. Preserve established working behavior unless a requirement intentionally changes it.
-3. Application callers depend on interfaces/contracts.
-4. Concrete services are selected at one composition point.
-5. Providers are adapters behind service/provider contracts.
-6. Provider names must not leak into screens or domain logic.
-7. Market categories have independent state.
-8. Market/API snapshots are immutable during user editing.
-9. Calculation logic is centralized and pure.
-10. Refresh updates only the affected market and its cache/state.
-11. Screens do not implement provider HTTP logic.
-12. Existing configuration/catalogs should be reused rather than duplicated.
-13. There must be one coherent UI/table event path.
-14. No fabricated market data.
-15. Failed refreshes preserve valid cached data.
-16. New architecture must reduce coupling, not merely add wrappers.
-
-## 19. Target Dependency Direction
-
-```text
-UI / Screens
-     |
-     v
-Application Services / Contracts
-     |
-     +-------------------+
-     |                   |
-     v                   v
-Domain / Calculation   Persistence
-     |
-     v
-Normalized Market Data
-     |
-     v
-Service Implementations
-     |
-     v
-Provider / Storage Adapters
-     |
-     v
-External Systems
-```
-
-The dependency direction is always inward toward stable application/domain contracts. External systems are replaceable adapters.
-
-## 20. Definition of Done
-
-The architecture is considered clean when:
-
-- replacing a market-data provider does not require screen changes;
-- replacing persistence does not require application/service callers to change;
-- FX/Crypto/Metals state cannot overwrite one another;
-- calculation has one authoritative implementation;
-- refresh has one predictable event flow;
-- each market screen consumes the same normalized service boundary;
-- duplicate service/UI implementations are removed after callers are migrated;
-- existing working behavior is preserved;
-- compile and runtime behavior are verified before declaring completion.
+1. Preserve the application contract.
+2. Change concrete wiring only at the composition point.
+3. Keep provider-specific structures behind adapters.
+4. Do not change screens merely because a provider changes.
+5. Do not duplicate state or services to support a new implementation.
+6. Verify behavior before and after the replacement.
