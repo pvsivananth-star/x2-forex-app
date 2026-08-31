@@ -1,6 +1,6 @@
 import {METAL_CATALOG} from '../../catalogs/metals';
 import {MarketAsset, Tenor} from '../../models';
-import {MarketResult} from './types';
+import {MarketResult} from '../../models';
 
 const TENOR_TRADING_DAYS: Record<Tenor, number> = {
     '1D': 1,

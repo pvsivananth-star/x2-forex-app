@@ -1,6 +1,6 @@
 import {FX_CATALOG} from '../../catalogs/currencies';
 import {MarketAsset, Tenor} from '../../models';
-import {MarketResult} from './types';
+import {MarketResult} from '../../models';
 
 const TENOR_DAYS: Record<Tenor, number> = {
     '1D': 1,

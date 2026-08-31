@@ -1,6 +1,6 @@
 import {EQUITY_ORDER} from '../../catalogs/equities';
 import {MarketAsset} from '../../models';
-import {MarketResult} from './types';
+import {MarketResult} from '../../models';
 
 const EQUITY_API_URL =
     'https://query1.finance.yahoo.com/v8/finance/chart';
