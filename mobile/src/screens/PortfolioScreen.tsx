@@ -3,7 +3,6 @@ import {ScrollView, Text, View} from 'react-native';
 
 import {PortfolioCategory} from '../models';
 import {AppColors} from '../theme';
-import {PortfolioTabs} from '../components/Portfolio/PortfolioTabs';
 import {styles} from './styles';
 
 interface Props {
@@ -29,17 +28,10 @@ const CATEGORY_DESCRIPTIONS: Record<PortfolioCategory, string> = {
 };
 
 const PortfolioScreen: React.FC<Props> = ({colors}) => {
-    const [activeCategory, setActiveCategory] =
-        useState<PortfolioCategory>('overview');
+    const [activeCategory] = useState<PortfolioCategory>('overview');
 
     return (
         <View style={styles.portfolioScreen}>
-            <PortfolioTabs
-                activeCategory={activeCategory}
-                onChange={setActiveCategory}
-                colors={colors}
-            />
-
             <ScrollView
                 style={styles.content}
                 contentContainerStyle={styles.marketContent}
