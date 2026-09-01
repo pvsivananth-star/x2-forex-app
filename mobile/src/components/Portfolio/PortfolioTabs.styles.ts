@@ -4,16 +4,17 @@ export const styles = StyleSheet.create({
     root: {
         flexDirection: 'row',
         alignItems: 'center',
-        borderBottomWidth: 1,
+        borderTopWidth: 1,
         paddingHorizontal: 6,
         paddingVertical: 6,
         gap: 5,
     },
 
     tab: {
+        flex: 1,
         minWidth: 42,
         height: 32,
-        paddingHorizontal: 8,
+        paddingHorizontal: 6,
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: 7,
@@ -21,7 +22,7 @@ export const styles = StyleSheet.create({
 
     code: {
         fontSize: 13,
-        fontWeight: '900',
+        fontWeight: '800',
         letterSpacing: 0.2,
     },
 });
