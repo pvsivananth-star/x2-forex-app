@@ -2,13 +2,16 @@
 
 ## 🛡️ Repository Access & Permissions
 
+- **Read-Only Mode**:
 - **Read-Only Baseline**: Baseline repository is strictly read-only for the agent.
 - **No Modifications**: Never write, commit, push, edit, modify, reset, checkout, or alter the repository.
 - **User Executes Actions**: The user handles all commits and execution after verification.
+- **Write Access Mode**:
 - **Write Access**: The agent cannot write, commit, push, or modify the repository in any way with user's approval'.
 - **Create dev branch**: The agent can create a dev branch for write access activities and the raise PR to working
   branch.
 - **Workspace State**: Assume the workspace is clean and ready for changes unless explicitly told otherwise.
+- ** Current Mode**: Write Access Mode
 
 ## 🔍 Codebase Inspection & Architecture
 
