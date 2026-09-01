@@ -26,21 +26,37 @@ export const MarketRow: React.FC<MarketRowProps> = ({
         : undefined;
     const displaySymbol = catalogAsset?.displaySymbol ?? asset.displaySymbol ?? asset.symbol;
     const displayName = catalogAsset?.name ?? asset.name;
-    const formatted = asset.rate.toFixed(decimalPlaces);
-    const [draft, setDraft] = useState(draftValue ?? formatted);
+    const formatDisplayRate = (value: number) =>
+        new Intl.NumberFormat(undefined, {
+            minimumFractionDigits: decimalPlaces,
+            maximumFractionDigits: decimalPlaces,
+        }).format(value);
+    const formatEditValue = (value: number) => value.toFixed(decimalPlaces);
+
+    const formatForDisplayFromString = (valStr: string) => {
+        const s = String(valStr ?? '');
+        const cleaned = s.replace(/,/g, '');
+        const parsed = Number(cleaned);
+        return (s !== '' && Number.isFinite(parsed)) ? formatDisplayRate(parsed) : s;
+    };
+
+    const displayRate = formatDisplayRate(asset.rate);
+    const editRate = formatEditValue(asset.rate);
+    const [draft, setDraft] = useState(draftValue ?? editRate);
     const [focused, setFocused] = useState(false);
+    const [selection, setSelection] = useState<{start: number; end: number} | undefined>(undefined);
 
     useEffect(() => {
-        if (!focused && draftValue === undefined) setDraft(formatted);
-    }, [asset.rate, decimalPlaces, focused, draftValue, formatted]);
+        if (!focused && draftValue === undefined) setDraft(editRate);
+    }, [asset.rate, decimalPlaces, editRate, focused, draftValue]);
 
     const currentValue = draftValue ?? draft;
 
     const commit = (value: string) => {
-        const trimmed = value.trim();
+        const trimmed = value.trim().replace(/,/g, '');
         const parsed = Number(trimmed);
         if (!trimmed || !Number.isFinite(parsed) || parsed <= 0) {
-            setDraft(formatted);
+            setDraft(editRate);
             return;
         }
         onCommit(asset.symbol, trimmed);
@@ -54,6 +70,7 @@ export const MarketRow: React.FC<MarketRowProps> = ({
     const finishEditing = () => {
         commit(currentValue);
         setFocused(false);
+        setSelection(undefined);
         onDeactivate?.();
     };
 
@@ -69,22 +86,31 @@ export const MarketRow: React.FC<MarketRowProps> = ({
                         style={[s.input, {borderWidth: 0}]}
                         accessibilityLabel={`Rate for ${displaySymbol}`}
                     >
-                        {formatted}
+                        {displayRate}
                     </Text>
                 ) : (
                     <TextInput
-                        value={currentValue}
+                        value={focused ? currentValue.replace(/,/g, '') : formatForDisplayFromString(currentValue)}
                         onFocus={() => {
                             setFocused(true);
                             onActivate?.();
+                            const raw = String(currentValue ?? '').replace(/,/g, '');
+                            const len = raw.length;
+                            // ensure native selection after focus/re-render
+                            setTimeout(() => setSelection({start: 0, end: len}), 0);
                         }}
                         onChangeText={(text) => {
                             if (onDraftChange) onDraftChange(asset.symbol, text);
                             else setDraft(text);
+                            // keep cursor at end while typing
+                            setSelection({start: text.length, end: text.length});
                         }}
-                        onBlur={finishEditing}
+                        onBlur={() => {
+                            finishEditing();
+                            setSelection(undefined);
+                        }}
                         onSubmitEditing={finishEditing}
-                        selectTextOnFocus
+                        selection={focused ? selection : undefined}
                         keyboardType="decimal-pad"
                         returnKeyType="done"
                         style={s.input}

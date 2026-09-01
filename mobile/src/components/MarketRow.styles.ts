@@ -8,7 +8,18 @@ export const styles = StyleSheet.create({
     changeColumn: {flex: 0.95, alignItems: 'flex-end', justifyContent: 'center'},
     symbol: {fontSize: 13, fontWeight: '900'},
     name: {fontSize: 9, marginTop: 1},
-    input: {minWidth: 88, height: 34, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, textAlign: 'right', textAlignVertical: 'center', fontSize: 13, fontWeight: '800'},
+    input: {
+        minWidth: 88,
+        height: 34,
+        borderRadius: 8,
+        paddingHorizontal: 8,
+        paddingVertical: 0,
+        textAlign: 'right',
+        textAlignVertical: 'center',
+        fontSize: 13,
+        fontWeight: '800',
+        lineHeight: 18,
+    },
     change: {fontSize: 11, fontWeight: '900'},
 });
 
@@ -25,9 +36,7 @@ export const makeRowStyles = (colors: any, active: boolean, isEquity: boolean, p
         backgroundColor: 'transparent',
         borderColor: colors.border,
         borderWidth: 1,
-        textAlign: 'right' as any,
-        textAlignVertical: 'center' as any,
     },
     change: styles.change,
     changeText: {...styles.change, color: getChangeColor(colors, positive)},
-});
+}) as any;
