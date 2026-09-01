@@ -5,31 +5,20 @@ export const styles = StyleSheet.create({
         flexDirection: 'row',
         borderTopWidth: 1,
         paddingHorizontal: 8,
-        paddingTop: 6,
-        paddingBottom: 7,
+        paddingVertical: 6,
         alignItems: 'center',
-        justifyContent: 'space-between',
     },
 
     tab: {
         flex: 1,
+        height: 34,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 4,
     },
 
-    icon: {
+    label: {
         fontSize: 18,
-        fontWeight: '800',
-    },
-
-    iconActive: {
-        fontSize: 18,
-        fontWeight: '900',
-    },
-
-    iconInactive: {
-        fontSize: 18,
-        fontWeight: '800',
+        lineHeight: 22,
+        textAlign: 'center',
     },
 });
