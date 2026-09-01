@@ -13,6 +13,20 @@
 - **Workspace State**: Assume the workspace is clean and ready for changes unless explicitly told otherwise.
 - ** Current Mode**: Write Access Mode
 
+## 📐 Architecture & React Engineering Standards
+
+- **Pattern Model**: Enforce a strict **Feature-Based Architecture / Domain-Driven Design**. Maintain clear separation
+  between UI Presentation, Custom Hooks (Business Logic), and API Services.
+- **File Length Constraint**: Strict cap on source file length. No file may exceed 600 lines.
+- **Component Splitting**: Break down monolithic structures into atomic, single-responsibility UI primitives and
+  localized feature blocks.
+- **State & Logic Isolation**: Isolate presentation from core logic. Use dedicated Custom Hooks for complex component
+  states and side effects.
+- **TypeScript Type Safety**: Enforce strict typing. Never use `any`. Always explicitly define interfaces for component
+  props, API payloads, and state models.
+- **Performance Hygiene**: Optimize rendering loops. Avoid inline arrow functions and raw object declarations inside JSX
+  returns to prevent unnecessary virtual DOM re-renders.
+
 ## 🔍 Codebase Inspection & Architecture
 
 - **Target Application**: `x2-forex-app`
@@ -31,10 +45,10 @@
 
 ## 🧪 Mandatory Verification & Testing
 
-- **Pre-Commit Testing**: Code changes are not ready until all relevant tests pass.
-- **Beyond TypeScript**: A passing `npx tsc --noEmit` is insufficient.
-- **Runtime Verification**: Verification must actively cover integration, runtime behavior, module resolution, and Expo
-  bundling/runtime mechanics.
+- **Pre-Commit Testing**: Code changes are not considered ready until all relevant automated tests pass.
+- **Beyond TypeScript**: A passing compile check or `tsc --noEmit` is insufficient.
+- **Runtime Verification**: Verification must actively cover end-to-end integration, runtime execution, module
+  resolution, and platform-specific bundling mechanics.
 
 ## 💻 Command Hygiene & Efficiency
 
