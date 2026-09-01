@@ -1,37 +1,21 @@
-import React, {useEffect, useMemo, useState,} from 'react';
-
-import {
-    SafeAreaView,
-    StatusBar,
-    Text,
-    TouchableOpacity,
-    useColorScheme,
-    View,
-} from 'react-native';
-
-import {REFRESH_INTERVAL_SECONDS, TENOR_OPTIONS, useMobileStore,} from './mobile-store';
-
-import { MarketAsset, TabCategory } from './models';
-
-import {CRYPTO_DEFAULT_CATALOG, FX_CATALOG, METAL_CATALOG, DEFAULT_EQUITY} from './catalogs';
-
-import { EQUITY_ORDER } from './catalogs/equities';
-import {DARK_COLORS, LIGHT_COLORS,} from './theme';
-import { BottomTabs } from './components/Navigation/BottomTabs';
+import React, {useEffect, useMemo, useState} from 'react';
+import {SafeAreaView, StatusBar, Text, TouchableOpacity, useColorScheme, View} from 'react-native';
+import {REFRESH_INTERVAL_SECONDS, TENOR_OPTIONS, useMobileStore} from './mobile-store';
+import {MarketAsset, PortfolioCategory, TabCategory} from './models';
+import {CRYPTO_DEFAULT_CATALOG, FX_CATALOG, METAL_CATALOG} from './catalogs';
+import {EQUITY_ORDER} from './catalogs/equities';
+import {DARK_COLORS, LIGHT_COLORS} from './theme';
+import {BottomTabs} from './components/Navigation/BottomTabs';
 import {PortfolioTabs} from './components/Portfolio/PortfolioTabs';
-import {RefreshTimer,} from './components/RefreshTimer';
-import {AssetPickerModal,} from './components/AssetPickerModal';
-import {SettingsModal,} from './components/SettingsModal';
+import {RefreshTimer} from './components/RefreshTimer';
+import {AssetPickerModal} from './components/AssetPickerModal';
+import {SettingsModal} from './components/SettingsModal';
 import MarketScreen from './screens/MarketScreen';
 import PortfolioScreen from './screens/PortfolioScreen';
-import { styles } from './screens/styles';
+import {styles} from './screens/styles';
 
 const TAB_TITLES: Record<TabCategory, string> = {
-    fx: 'Forex',
-    equity: 'Equities',
-    crypto: 'Crypto',
-    metals: 'Metals',
-    portfolio: 'Portfolio',
+    fx: 'Forex', equity: 'Equities', crypto: 'Crypto', metals: 'Metals', portfolio: 'Portfolio',
 };
 
 export const MobileApplication: React.FC = () => {
@@ -53,6 +37,7 @@ export const MobileApplication: React.FC = () => {
     const [search, setSearch] = useState('');
     const [draftRates, setDraftRates] = useState<Record<string, string>>({});
     const [focusedSymbol, setFocusedSymbol] = useState<string | null>(null);
+    const [portfolioCategory, setPortfolioCategory] = useState<PortfolioCategory>('overview');
 
     const darkMode = theme === 'dark' || (theme === 'system' && systemTheme !== 'light');
     const colors = darkMode ? DARK_COLORS : LIGHT_COLORS;
@@ -91,9 +76,7 @@ export const MobileApplication: React.FC = () => {
         updateAssetRate(symbol, parsed);
         setDraftRates(previous => { const next = {...previous}; delete next[symbol]; return next; });
     };
-
     const changeDraftRate = (symbol: string, value: string) => setDraftRates(previous => ({...previous, [symbol]: value}));
-
     const moveRow = (index: number, direction: -1 | 1) => {
         const next = [...currentWatchlist];
         const target = index + direction;
@@ -102,7 +85,6 @@ export const MobileApplication: React.FC = () => {
         [next[index], next[target]] = [next[target], next[index]];
         reorderWatchlist(activeTab, next);
     };
-
     const openPicker = () => { setSearch(''); setPickerOpen(true); };
     const addAsset = (symbol: string) => { addAssetToWatchlist(activeTab, symbol); setPickerOpen(false); setSearch(''); };
     const removeAsset = (symbol: string) => removeAssetFromWatchlist(activeTab, symbol);
@@ -122,9 +104,7 @@ export const MobileApplication: React.FC = () => {
                         <Text style={[styles.menu, {color: colors.text}]}>☰</Text>
                     </TouchableOpacity>
                     <Text style={[styles.logo, {color: colors.accent}]}>X2</Text>
-                    <View style={styles.titleContainer}>
-                        <Text style={[styles.title, {color: colors.text}]}>{TAB_TITLES[activeTab]}</Text>
-                    </View>
+                    <View style={styles.titleContainer}><Text style={[styles.title, {color: colors.text}]}>{TAB_TITLES[activeTab]}</Text></View>
                     <View style={styles.headerActions}>
                         {activeTab !== 'portfolio' && activeTab !== 'equity' && !isEditMode && <TouchableOpacity onPress={startEditing} style={styles.headerButton} accessibilityLabel="Edit watchlist"><Text style={[styles.headerButtonText, {color: colors.text}]}>✎</Text></TouchableOpacity>}
                         {activeTab !== 'portfolio' && !isEditMode && <RefreshTimer countdown={countdown} totalSeconds={REFRESH_INTERVAL_SECONDS} color={colors.accent} backgroundColor={colors.border} disabled={isLoading} onPress={() => void forceRefresh()} />}
@@ -134,9 +114,9 @@ export const MobileApplication: React.FC = () => {
                 </View>
             </View>
 
-            {activeTab === 'portfolio' ? <PortfolioScreen colors={colors} /> : <MarketScreen activeTab={activeTab} isEditMode={isEditMode} visibleAssets={visibleAssets} decimalPlaces={decimalPlaces} colors={colors} draftRates={draftRates} onDraftChange={changeDraftRate} onCommit={commitRate} focusedSymbol={focusedSymbol} setFocusedSymbol={setFocusedSymbol} moveRow={moveRow} removeAsset={removeAsset} openPicker={openPicker} tenorOpen={tenorOpen} setTenorOpen={setTenorOpen} activeTenor={activeTenor} changeTenor={changeTenor} onCancel={cancelEditing} onApply={() => void applyEditing()} />}
+            {activeTab === 'portfolio' ? <PortfolioScreen colors={colors} activeCategory={portfolioCategory} /> : <MarketScreen activeTab={activeTab} isEditMode={isEditMode} visibleAssets={visibleAssets} decimalPlaces={decimalPlaces} colors={colors} draftRates={draftRates} onDraftChange={changeDraftRate} onCommit={commitRate} focusedSymbol={focusedSymbol} setFocusedSymbol={setFocusedSymbol} moveRow={moveRow} removeAsset={removeAsset} openPicker={openPicker} tenorOpen={tenorOpen} setTenorOpen={setTenorOpen} activeTenor={activeTenor} changeTenor={changeTenor} onCancel={cancelEditing} onApply={() => void applyEditing()} />}
 
-            {!isEditMode && activeTab === 'portfolio' && <PortfolioTabs activeCategory="overview" onChange={() => {}} colors={colors} />}
+            {!isEditMode && activeTab === 'portfolio' && <PortfolioTabs activeCategory={portfolioCategory} onChange={setPortfolioCategory} colors={colors} />}
             {!isEditMode && <BottomTabs activeTab={activeTab} colors={colors} onChange={setActiveTab} />}
 
             <AssetPickerModal visible={pickerOpen} title={`Add ${activeTab === 'fx' ? 'Currency' : activeTab === 'crypto' ? 'Crypto' : 'Metal'}`} placeholder={activeTab === 'crypto' ? 'Search Bitcoin, BTC, Ethereum...' : activeTab === 'fx' ? 'Search INR, India, Euro...' : 'Search Gold, Silver, Platinum...'} assets={filteredPickerCatalog} selected={currentWatchlist} search={search} colors={colors} onSearch={setSearch} onSelect={addAsset} onClose={() => setPickerOpen(false)} />
