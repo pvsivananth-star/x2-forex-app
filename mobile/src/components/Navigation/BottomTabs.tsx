@@ -17,12 +17,12 @@ interface Props {
     colors: TabColors;
 }
 
-const TABS: {key: TabCategory; icon: string}[] = [
-    {key: 'fx', icon: 'FX'},
-    {key: 'equity', icon: 'EQ'},
-    {key: 'crypto', icon: '₿'},
-    {key: 'metals', icon: 'Au'},
-    {key: 'portfolio', icon: 'PF'},
+const TABS: {key: TabCategory; label: string}[] = [
+    {key: 'fx', label: 'Fx'},
+    {key: 'equity', label: 'Eq'},
+    {key: 'crypto', label: 'Cr'},
+    {key: 'metals', label: 'Au'},
+    {key: 'portfolio', label: 'PF'},
 ];
 
 export function BottomTabs({activeTab, onChange, colors}: Props) {
@@ -49,13 +49,14 @@ export function BottomTabs({activeTab, onChange, colors}: Props) {
                     >
                         <Text
                             style={[
-                                active ? styles.iconActive : styles.iconInactive,
+                                styles.label,
                                 {
                                     color: active ? colors.accent : colors.muted,
+                                    fontWeight: active ? '900' : '800',
                                 },
                             ]}
                         >
-                            {tab.icon}
+                            {tab.label}
                         </Text>
                     </Pressable>
                 );
