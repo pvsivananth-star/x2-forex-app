@@ -24,6 +24,8 @@ interface Props {
   setTenorOpen: (v: boolean) => void;
   activeTenor: typeof TENOR_OPTIONS[number];
   changeTenor: (v: typeof TENOR_OPTIONS[number]) => void;
+  onCancel: () => void;
+  onApply: () => void;
 }
 
 const MarketScreen: React.FC<Props> = ({
@@ -129,11 +131,11 @@ const MarketScreen: React.FC<Props> = ({
 
       {isEditMode && (
         <View style={[styles.editFooter, { backgroundColor: colors.surface, borderTopColor: colors.border }]}> 
-          <TouchableOpacity onPress={() => { /* parent handles cancelEditing */ }} style={[styles.footerButton, { borderColor: colors.border }]}>
+          <TouchableOpacity onPress={onCancel} style={[styles.footerButton, { borderColor: colors.border }]}>
             <Text style={{ color: colors.muted, fontWeight: '900' }}>Cancel</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => { /* parent handles applyEditing */ }} style={[styles.footerButton, { backgroundColor: colors.accentStrong, borderColor: colors.accentStrong }]}>
+          <TouchableOpacity onPress={() => onApply()} style={[styles.footerButton, { backgroundColor: colors.accentStrong, borderColor: colors.accentStrong }]}>
             <Text style={{ color: '#FFFFFF', fontWeight: '900' }}>Apply</Text>
           </TouchableOpacity>
         </View>

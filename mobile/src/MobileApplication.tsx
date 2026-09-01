@@ -391,6 +391,8 @@ export const MobileApplication: React.FC =
                         setTenorOpen={setTenorOpen}
                         activeTenor={activeTenor}
                         changeTenor={changeTenor}
+                        onCancel={cancelEditing}
+                        onApply={() => void applyEditing()}
                     />
                 )}
 
