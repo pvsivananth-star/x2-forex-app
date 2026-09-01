@@ -26,20 +26,14 @@ const TABS: PortfolioTab[] = [
     {key: 'commodity', code: 'CM', label: 'Commodity'},
 ];
 
-const ACTIVE_COLOR = '#E58A24';
-
-export function PortfolioTabs({
-    activeCategory,
-    onChange,
-    colors,
-}: Props) {
+export function PortfolioTabs({activeCategory, onChange, colors}: Props) {
     return (
         <View
             style={[
                 styles.root,
                 {
                     backgroundColor: colors.surface,
-                    borderBottomColor: colors.border,
+                    borderTopColor: colors.border,
                 },
             ]}
         >
@@ -53,20 +47,14 @@ export function PortfolioTabs({
                         accessibilityRole="tab"
                         accessibilityLabel={tab.label}
                         accessibilityState={{selected: active}}
-                        style={[
-                            styles.tab,
-                            active && {
-                                backgroundColor: ACTIVE_COLOR,
-                            },
-                        ]}
+                        style={styles.tab}
                     >
                         <Text
                             style={[
                                 styles.code,
                                 {
-                                    color: active
-                                        ? '#FFFFFF'
-                                        : colors.muted,
+                                    color: active ? colors.accent : colors.muted,
+                                    fontWeight: active ? '900' : '800',
                                 },
                             ]}
                         >
