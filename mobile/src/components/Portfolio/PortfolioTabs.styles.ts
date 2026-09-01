@@ -6,21 +6,20 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
         borderTopWidth: 1,
         paddingHorizontal: 8,
-        paddingTop: 6,
-        paddingBottom: 7,
-        gap: 0,
+        paddingVertical: 6,
     },
 
     tab: {
         flex: 1,
+        height: 34,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 4,
     },
 
     code: {
-        fontSize: 18,
+        fontSize: 15,
+        lineHeight: 19,
+        textAlign: 'center',
         fontWeight: '800',
-        letterSpacing: 0.2,
     },
 });
