@@ -48,11 +48,10 @@ export const MarketRow: React.FC<MarketRowProps> = ({
     };
 
     const positive = asset.changePct >= 0;
-    const s = makeRowStyles(colors, active, asset.category === 'equity', positive);
+    const isEquity = asset.category === 'equity';
+    const s = makeRowStyles(colors, active, isEquity, positive);
 
     const finishEditing = () => {
-        // Blur is the reliable cross-platform signal that the user has
-        // moved focus away from this field. Commit before clearing edit state.
         commit(currentValue);
         setFocused(false);
         onDeactivate?.();
@@ -65,8 +64,13 @@ export const MarketRow: React.FC<MarketRowProps> = ({
                 <Text style={s.name} numberOfLines={1}>{displayName}</Text>
             </View>
             <View style={s.rateColumn}>
-                {asset.category === 'equity' ? (
-                    <Text style={s.input} accessibilityLabel={`Rate for ${displaySymbol}`}>{formatted}</Text>
+                {isEquity ? (
+                    <Text
+                        style={[s.input, {borderWidth: 0}]}
+                        accessibilityLabel={`Rate for ${displaySymbol}`}
+                    >
+                        {formatted}
+                    </Text>
                 ) : (
                     <TextInput
                         value={currentValue}
