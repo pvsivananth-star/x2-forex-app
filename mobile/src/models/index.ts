@@ -1,5 +1,13 @@
 export type TabCategory = 'fx' | 'equity' | 'crypto' | 'metals' | 'portfolio';
 
+export type PortfolioCategory =
+    | 'overview'
+    | 'bank'
+    | 'market'
+    | 'fixedIncome'
+    | 'land'
+    | 'commodity';
+
 export type Tenor = '1D' | '1W' | '1M' | '3M' | '6M' | '1Y';
 
 export type DecimalPlaces = 2 | 3 | 4;
