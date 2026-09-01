@@ -21,7 +21,7 @@ interface Props {
   removeAsset: (symbol: string) => void;
   openPicker: () => void;
   tenorOpen: boolean;
-  setTenorOpen: (v: boolean) => void;
+  setTenorOpen: React.Dispatch<React.SetStateAction<boolean>>;
   activeTenor: typeof TENOR_OPTIONS[number];
   changeTenor: (v: typeof TENOR_OPTIONS[number]) => void;
   onCancel: () => void;
@@ -46,6 +46,8 @@ const MarketScreen: React.FC<Props> = ({
   setTenorOpen,
   activeTenor,
   changeTenor,
+  onCancel,
+  onApply,
 }) => {
   return (
     <>

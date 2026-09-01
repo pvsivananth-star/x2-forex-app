@@ -213,7 +213,7 @@ export const MobileApplication: React.FC =
                     }
 
                     if (activeTab === 'equity') {
-                        return DEFAULT_EQUITY;
+                        return EQUITY_ORDER.map(item => ({ symbol: item.symbol, name: item.name, rate: 0, changePct: 0, category: 'equity' }));
                     }
 
                     if (activeTab === 'metals') {

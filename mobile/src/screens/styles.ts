@@ -31,7 +31,7 @@ export const styles = StyleSheet.create({
 
     logo: {
         fontSize: 21,
-        fontWeight: '950',
+        fontWeight: '900',
         letterSpacing: 1,
         marginHorizontal: 8,
     },
@@ -219,5 +219,12 @@ export const styles = StyleSheet.create({
     emptyText: {
         fontSize: 13,
         fontWeight: '700',
+    },
+
+    connectionIndicator: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        marginLeft: 8,
     },
 });
