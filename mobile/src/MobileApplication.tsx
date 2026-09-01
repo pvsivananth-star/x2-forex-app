@@ -120,7 +120,7 @@ export const MobileApplication: React.FC = () => {
             {!isEditMode && <BottomTabs activeTab={activeTab} colors={colors} onChange={setActiveTab} />}
 
             <AssetPickerModal visible={pickerOpen} title={`Add ${activeTab === 'fx' ? 'Currency' : activeTab === 'crypto' ? 'Crypto' : 'Metal'}`} placeholder={activeTab === 'crypto' ? 'Search Bitcoin, BTC, Ethereum...' : activeTab === 'fx' ? 'Search INR, India, Euro...' : 'Search Gold, Silver, Platinum...'} assets={filteredPickerCatalog} selected={currentWatchlist} search={search} colors={colors} onSearch={setSearch} onSelect={addAsset} onClose={() => setPickerOpen(false)} />
-            <SettingsModal visible={settingsOpen} colors={colors} theme={theme} decimalPlaces={decimalPlaces} onThemeChange={setTheme} onDecimalChange={value => setDecimalPlaces(value)} onResetMarketDefaults={async () => {await resetMarketDefaults(); setDraftRates({}); setSettingsOpen(false);}} onClose={() => setSettingsOpen(false)} />
+            <SettingsModal visible={settingsOpen} colors={colors} theme={theme} decimalPlaces={decimalPlaces} onThemeChange={setTheme} onDecimalChange={value => setDecimalPlaces(value)} onApplySettings={() => setSettingsOpen(false)} onResetMarketDefaults={async () => {await resetMarketDefaults(); setDraftRates({}); setSettingsOpen(false);}} onClose={() => setSettingsOpen(false)} />
         </SafeAreaView>
     );
 };
