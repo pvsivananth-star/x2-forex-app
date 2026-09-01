@@ -22,16 +22,10 @@ const TABS: {key: TabCategory; icon: string}[] = [
     {key: 'equity', icon: 'EQ'},
     {key: 'crypto', icon: '₿'},
     {key: 'metals', icon: 'Au'},
-    {key: 'portfolio', icon: '◔'},
+    {key: 'portfolio', icon: 'PF'},
 ];
 
-const PORTFOLIO_ACTIVE_COLOR = '#E58A24';
-
-export function BottomTabs({
-    activeTab,
-    onChange,
-    colors,
-}: Props) {
+export function BottomTabs({activeTab, onChange, colors}: Props) {
     return (
         <View
             style={[
@@ -44,10 +38,6 @@ export function BottomTabs({
         >
             {TABS.map((tab) => {
                 const active = activeTab === tab.key;
-                const activeColor =
-                    tab.key === 'portfolio'
-                        ? PORTFOLIO_ACTIVE_COLOR
-                        : colors.accent;
 
                 return (
                     <Pressable
@@ -59,13 +49,9 @@ export function BottomTabs({
                     >
                         <Text
                             style={[
-                                active
-                                    ? styles.iconActive
-                                    : styles.iconInactive,
+                                active ? styles.iconActive : styles.iconInactive,
                                 {
-                                    color: active
-                                        ? activeColor
-                                        : colors.muted,
+                                    color: active ? colors.accent : colors.muted,
                                 },
                             ]}
                         >
