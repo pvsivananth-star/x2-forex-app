@@ -10,7 +10,7 @@ import {
     View,
 } from 'react-native';
 
-import {REFRESH_INTERVAL_SECONDS, TENOR_OPTIONS, useMobileStore,} from './MobileService';
+import {REFRESH_INTERVAL_SECONDS, TENOR_OPTIONS, useMobileStore,} from './mobile-store';
 
 import { MarketAsset, TabCategory } from './models';
 
