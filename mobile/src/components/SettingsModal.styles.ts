@@ -7,29 +7,24 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 18,
     },
-
     modal: {
         width: '100%',
         borderRadius: 16,
         borderWidth: 1,
         padding: 18,
     },
-
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
     },
-
     title: {
         fontSize: 19,
         fontWeight: '900',
     },
-
     close: {
         fontSize: 28,
     },
-
     section: {
         marginTop: 18,
         marginBottom: 8,
@@ -37,12 +32,10 @@ export const styles = StyleSheet.create({
         fontWeight: '900',
         textTransform: 'uppercase',
     },
-
     options: {
         flexDirection: 'row',
         gap: 7,
     },
-
     option: {
         flex: 1,
         alignItems: 'center',
@@ -50,12 +43,20 @@ export const styles = StyleSheet.create({
         borderWidth: 1,
         borderRadius: 8,
     },
-
     info: {
         fontSize: 12,
         lineHeight: 18,
     },
-
+    apply: {
+        marginTop: 18,
+        paddingVertical: 11,
+        borderRadius: 9,
+        alignItems: 'center',
+    },
+    applyText: {
+        color: '#FFFFFF',
+        fontWeight: '900',
+    },
     reset: {
         marginTop: 10,
         paddingVertical: 10,
@@ -63,11 +64,9 @@ export const styles = StyleSheet.create({
         borderWidth: 1,
         alignItems: 'center',
     },
-
     resetText: {
         fontWeight: '900',
     },
-
     disclaimer: {
         marginTop: 10,
         padding: 11,
@@ -76,18 +75,6 @@ export const styles = StyleSheet.create({
         fontSize: 11,
         lineHeight: 17,
         fontWeight: '700',
-    },
-
-    done: {
-        marginTop: 20,
-        paddingVertical: 11,
-        borderRadius: 9,
-        alignItems: 'center',
-    },
-
-    doneText: {
-        color: '#FFFFFF',
-        fontWeight: '900',
     },
 });
 
@@ -109,6 +96,8 @@ export const themed = (colors: any) => ({
         fontWeight: '800',
     }),
     info: (colors: any) => ({...styles.info, color: colors.muted}),
+    apply: (colors: any) => ({...styles.apply, backgroundColor: colors.accent}),
+    applyText: styles.applyText,
     reset: (colors: any) => ({...styles.reset, backgroundColor: colors.surface, borderColor: colors.warning}),
     resetText: (colors: any) => ({...styles.resetText, color: colors.warning}),
     disclaimer: (colors: any) => ({...styles.disclaimer, color: colors.warning, borderColor: colors.border, backgroundColor: colors.surface}),
