@@ -26,12 +26,10 @@ export const styles = StyleSheet.create({
     iconActive: {
         fontSize: 18,
         fontWeight: '900',
-        color: '#FF6B4A',
     },
 
     iconInactive: {
         fontSize: 18,
         fontWeight: '800',
-        color: '#666',
     },
 });
