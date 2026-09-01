@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "x2 Forex",
+    "name": "x2",
     "slug": "x2-forex-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "platforms": ["ios", "android", "web"],
     "android": {
-      "package": "com.pvsivananth.x2forex"
+      "package": "dev.x2apps.x2"
     }
   }
 }
