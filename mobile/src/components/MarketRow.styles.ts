@@ -1,4 +1,5 @@
 import {StyleSheet} from 'react-native';
+import {getChangeColor} from './styles/sharedStyles';
 
 export const styles = StyleSheet.create({
     row: {minHeight: 48, height: 48, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1},
@@ -11,8 +12,6 @@ export const styles = StyleSheet.create({
     change: {fontSize: 11, fontWeight: '900'},
 });
 
-import {getChangeColor} from './styles/sharedStyles';
-
 export const makeRowStyles = (colors: any, active: boolean, isEquity: boolean, positive: boolean) => ({
     row: {...styles.row, borderBottomColor: colors.border},
     assetColumn: styles.assetColumn,
@@ -24,8 +23,8 @@ export const makeRowStyles = (colors: any, active: boolean, isEquity: boolean, p
         ...styles.input,
         color: colors.text,
         backgroundColor: 'transparent',
-        borderColor: active ? colors.accent : 'transparent',
-        borderWidth: active ? 1.5 : 0,
+        borderColor: colors.border,
+        borderWidth: 1,
         textAlign: 'right' as any,
     },
     change: styles.change,
