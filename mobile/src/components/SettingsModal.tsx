@@ -83,9 +83,9 @@ export const SettingsModal: React.FC<
                             <TouchableOpacity
                                 key={value}
                                 onPress={() => onThemeChange(value)}
-                                style={s.option(theme === value, colors)}
+                                style={s.option(theme === value, colors) as any}
                             >
-                                <Text style={s.optionText(theme === value, colors)}>{label}</Text>
+                                <Text style={s.optionText(theme === value, colors) as any}>{label}</Text>
                             </TouchableOpacity>
                         ))}
                     </View>
@@ -97,9 +97,9 @@ export const SettingsModal: React.FC<
                             <TouchableOpacity
                                 key={value}
                                 onPress={() => onDecimalChange(value)}
-                                style={s.option(decimalPlaces === value, colors)}
+                                style={s.option(decimalPlaces === value, colors) as any}
                             >
-                                <Text style={s.optionText(decimalPlaces === value, colors)}>{value}</Text>
+                                <Text style={s.optionText(decimalPlaces === value, colors) as any}>{value}</Text>
                             </TouchableOpacity>
                         ))}
                     </View>
@@ -110,8 +110,8 @@ export const SettingsModal: React.FC<
                         Caution: Application will reset to system defaults. Your local changes will be overriden.
                     </Text>
 
-                    <TouchableOpacity onPress={onResetMarketDefaults} style={s.reset(colors)}>
-                        <Text style={s.resetText(colors)}>Apply Default Settings</Text>
+                    <TouchableOpacity onPress={onResetMarketDefaults} style={s.reset(colors) as any}>
+                        <Text style={s.resetText(colors) as any}>Apply Default Settings</Text>
                     </TouchableOpacity>
 
                     <Text style={s.section}>Refresh</Text>

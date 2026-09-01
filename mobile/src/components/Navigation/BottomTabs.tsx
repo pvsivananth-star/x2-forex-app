@@ -4,7 +4,6 @@ import { TabCategory } from '../../models';
 import {styles} from './BottomTabs.styles';
 
 const TABS: { key: TabCategory; icon: string }[] = [
-    { key: 'dashboard', icon: '★' },
     { key: 'fx', icon: 'FX' },
     { key: 'equity', icon: 'EQ' },
     { key: 'crypto', icon: '₿' },
@@ -12,9 +11,9 @@ const TABS: { key: TabCategory; icon: string }[] = [
     { key: 'portfolio', icon: '📊' },
 ];
 
-export function BottomTabs({activeTab, onChange}: { activeTab: TabCategory; onChange: (tab: TabCategory) => void }) {
+export function BottomTabs({activeTab, colors, onChange}: { activeTab: TabCategory; colors: any; onChange: (tab: TabCategory) => void }) {
     return (
-        <View style={styles.root}>
+        <View style={[styles.root, { backgroundColor: colors.surface }]}>
             {TABS.map((t) => {
                 const active = activeTab === t.key;
                 return (
