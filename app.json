@@ -10,6 +10,11 @@
     },
     "android": {
       "package": "dev.x2apps.x2"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "2702e3b5-cbd4-4704-a462-e97b773797c6"
+      }
     }
   }
 }
