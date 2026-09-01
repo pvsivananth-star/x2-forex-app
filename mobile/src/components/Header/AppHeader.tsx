@@ -3,7 +3,7 @@ import {Pressable, Text, View} from 'react-native';
 import {styles} from '../AppHeader.styles';
 import {ConnectionIndicator} from './ConnectionIndicator';
 import {RefreshButton} from './RefreshButton';
-import {useMobileStore} from '../../state/marketStore';
+import {useMobileStore} from '../../mobile-store';
 
 export function AppHeader({title, onMenuPress}: { title: string; onMenuPress?: () => void }) {
     const online = useMobileStore(s => s.isOnline);

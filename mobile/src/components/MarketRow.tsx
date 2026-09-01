@@ -12,6 +12,10 @@ interface MarketRowProps {
     decimalPlaces: number;
     colors: AppColors;
 
+    // Optional external draft control
+    draftValue?: string | undefined;
+    onDraftChange?: ((symbol: string, value: string) => void) | undefined;
+
     onCommit: (
         symbol: string,
         value: string,
@@ -29,6 +33,8 @@ export const MarketRow: React.FC<
          asset,
          decimalPlaces,
          colors,
+         draftValue,
+         onDraftChange,
          onCommit,
          active = false,
          onActivate,
@@ -38,7 +44,7 @@ export const MarketRow: React.FC<
 
     const formatted = asset.rate.toFixed(decimalPlaces);
 
-    const [draft, setDraft] = useState(formatted);
+    const [draft, setDraft] = useState(draftValue ?? formatted);
 
     const [focused, setFocused] = useState(false);
 
@@ -55,6 +61,12 @@ export const MarketRow: React.FC<
             lastCommittedRate.current = asset.rate;
         }
     }, [asset.rate, decimalPlaces, focused]);
+
+    useEffect(() => {
+        if (!focused && typeof draftValue === 'string' && draftValue !== draft) {
+            setDraft(draftValue);
+        }
+    }, [draftValue, focused]);
 
     const commit = (value: string) => {
         const trimmed = value.trim();
@@ -97,12 +109,18 @@ export const MarketRow: React.FC<
                     </Text>
                 ) : (
                     <TextInput
-                        value={draft}
+                        value={draftValue ?? draft}
                         onFocus={() => {
                             setFocused(true);
                             onActivate?.();
                         }}
-                        onChangeText={setDraft}
+                        onChangeText={(text) => {
+                            if (onDraftChange) {
+                                onDraftChange(asset.symbol, text);
+                            } else {
+                                setDraft(text);
+                            }
+                        }}
                         onBlur={() => {
                             // Do not commit on blur — only commit on explicit submit (enter/tab).
                             setFocused(false);
@@ -112,7 +130,7 @@ export const MarketRow: React.FC<
                         onSubmitEditing={() => {
                             setFocused(false);
                             // Commit only when user submits (Enter/Done)
-                            commit(draft);
+                            commit(draftValue ?? draft);
                         }}
                         selectTextOnFocus
                         keyboardType="decimal-pad"

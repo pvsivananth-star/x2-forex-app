@@ -34,18 +34,18 @@ export const styles = StyleSheet.create({
 export const ringStyle = (backgroundColor: string) => ({
     ...styles.ring,
     borderColor: backgroundColor,
-});
+} as any);
 
 export const segmentStyle = (active: boolean, color: string, backgroundColor: string, angle: number) => ({
     ...styles.segment,
     backgroundColor: active ? color : backgroundColor,
     transform: [
-        {rotate: `${angle}deg`},
-        {translateY: -10},
+        {rotate: `${angle}deg`} as any,
+        {translateY: -10} as any,
     ],
-});
+} as any);
 
 export const innerStyle = (backgroundColor: string) => ({
     ...styles.inner,
     backgroundColor,
-});
+} as any);

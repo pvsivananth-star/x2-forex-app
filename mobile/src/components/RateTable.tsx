@@ -265,6 +265,8 @@ export const RateTable: React.FC<
                         symbol &&
                         asset.isCustomEdited;
 
+                    const r: any = rowStyles(colors, focusedSymbol === symbol, asset.changePct >= 0);
+
                     return (
                         <View
                             key={symbol}
@@ -297,6 +299,7 @@ export const RateTable: React.FC<
                                         1
                                     }
                                     style={r.name(colors)}>
+
                                     {
                                         asset.name
                                     }
@@ -321,6 +324,7 @@ export const RateTable: React.FC<
                             <View style={r.change}>
                                 {!(symbol === 'USD' && (category === 'crypto' || category === 'metals')) ? (
                                     <Text style={r.changeText(colors, asset.changePct >= 0)}>
+
                                         {asset.changePct >= 0 ? '+' : ''}{asset.changePct.toFixed(2)}%
                                     </Text>
                                 ) : (

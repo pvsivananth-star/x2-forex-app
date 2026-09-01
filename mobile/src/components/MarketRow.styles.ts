@@ -61,6 +61,10 @@ export const makeRowStyles = (colors: any, active: boolean, isEquity: boolean, p
 
     assetColumn: styles.assetColumn,
 
+    rateColumn: styles.rateColumn,
+
+    changeColumn: styles.changeColumn,
+
     symbol: {
         ...styles.symbol,
         color: colors.text,
@@ -77,7 +81,7 @@ export const makeRowStyles = (colors: any, active: boolean, isEquity: boolean, p
         backgroundColor: isEquity ? 'transparent' : colors.surface,
         borderColor: isEquity ? 'transparent' : (active ? '#222' : colors.border),
         borderWidth: isEquity ? 0 : (active ? 1.5 : 1),
-        textAlign: 'right',
+        textAlign: 'right' as any,
     },
 
     change: styles.change,
@@ -86,4 +90,5 @@ export const makeRowStyles = (colors: any, active: boolean, isEquity: boolean, p
         ...styles.change,
         color: getChangeColor(colors, positive),
     },
+
 });
