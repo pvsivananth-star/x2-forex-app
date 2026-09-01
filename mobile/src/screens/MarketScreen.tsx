@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { MarketAsset, TabCategory } from '../models';
-import { TENOR_OPTIONS } from '../MobileService';
+import { TENOR_OPTIONS } from '../mobile-store';
 import { EditRow } from '../components/EditRow';
 import { MarketRow } from '../components/MarketRow';
 import { styles } from './styles';
