@@ -19,38 +19,27 @@ import {
 
 interface SettingsModalProps {
     visible: boolean;
-
     colors: AppColors;
-
     theme: ThemePreference;
-
     decimalPlaces: DecimalPlaces;
-
-    onThemeChange: (
-        theme: ThemePreference,
-    ) => void;
-
-    onDecimalChange: (
-        value: DecimalPlaces,
-    ) => void;
-
+    onThemeChange: (theme: ThemePreference) => void;
+    onDecimalChange: (value: DecimalPlaces) => void;
     onClose: () => void;
-
+    onApplySettings: () => void;
     onResetMarketDefaults: () => void;
 }
 
-export const SettingsModal: React.FC<
-    SettingsModalProps
-> = ({
-         visible,
-         colors,
-         theme,
-         decimalPlaces,
-         onThemeChange,
-         onDecimalChange,
-         onClose,
-         onResetMarketDefaults,
-     }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({
+    visible,
+    colors,
+    theme,
+    decimalPlaces,
+    onThemeChange,
+    onDecimalChange,
+    onClose,
+    onApplySettings,
+    onResetMarketDefaults,
+}) => {
     const s = themed(colors);
 
     return (
@@ -64,14 +53,12 @@ export const SettingsModal: React.FC<
                 <View style={s.modal}>
                     <View style={s.header}>
                         <Text style={s.title}>Settings</Text>
-
                         <TouchableOpacity onPress={onClose}>
                             <Text style={s.close}>×</Text>
                         </TouchableOpacity>
                     </View>
 
                     <Text style={s.section}>Appearance</Text>
-
                     <View style={s.options}>
                         {(
                             [
@@ -85,13 +72,14 @@ export const SettingsModal: React.FC<
                                 onPress={() => onThemeChange(value)}
                                 style={s.option(theme === value, colors) as any}
                             >
-                                <Text style={s.optionText(theme === value, colors) as any}>{label}</Text>
+                                <Text style={s.optionText(theme === value, colors) as any}>
+                                    {label}
+                                </Text>
                             </TouchableOpacity>
                         ))}
                     </View>
 
                     <Text style={s.section}>Decimal Places</Text>
-
                     <View style={s.options}>
                         {([2, 3, 4] as const).map((value) => (
                             <TouchableOpacity
@@ -99,47 +87,39 @@ export const SettingsModal: React.FC<
                                 onPress={() => onDecimalChange(value)}
                                 style={s.option(decimalPlaces === value, colors) as any}
                             >
-                                <Text style={s.optionText(decimalPlaces === value, colors) as any}>{value}</Text>
+                                <Text style={s.optionText(decimalPlaces === value, colors) as any}>
+                                    {value}
+                                </Text>
                             </TouchableOpacity>
                         ))}
                     </View>
 
-                    <Text style={s.section}>Reset App Settings</Text>
+                    <TouchableOpacity
+                        onPress={onApplySettings}
+                        style={s.apply(colors) as any}
+                        accessibilityRole="button"
+                        accessibilityLabel="Apply Settings"
+                    >
+                        <Text style={s.applyText as any}>Apply Settings</Text>
+                    </TouchableOpacity>
 
+                    <Text style={s.section}>Reset App Settings</Text>
                     <Text style={s.info(colors)}>
                         Caution: Application will reset to system defaults. Your local changes will be overriden.
                     </Text>
-
                     <TouchableOpacity onPress={onResetMarketDefaults} style={s.reset(colors) as any}>
                         <Text style={s.resetText(colors) as any}>Apply Default Settings</Text>
                     </TouchableOpacity>
 
                     <Text style={s.section}>Refresh</Text>
-
                     <Text style={s.info(colors)}>
-                        Rates automatically refresh
-                        every 3 minutes. Tap the
-                        circular control in the header
-                        to refresh immediately.
+                        Rates automatically refresh every 3 minutes. Tap the circular control in the header to refresh immediately.
                     </Text>
-
                     <Text style={s.disclaimer(colors)}>
-                        Disclaimer: Exchange rates
-                        provided in this app are for
-                        informational and indicative
-                        purposes only and do not
-                        constitute real-time quotes for
-                        trading or financial transactions.
-                        The developer assumes no legal
-                        liability or responsibility for
-                        any financial losses, damages, or
-                        decisions made based on the data
-                        provided herein.
+                        Disclaimer: Exchange rates provided in this app are for informational and indicative purposes only and do not constitute real-time quotes for trading or financial transactions. The developer assumes no legal liability or responsibility for any financial losses, damages, or decisions made based on the data provided herein.
                     </Text>
-
                 </View>
             </View>
         </Modal>
     );
 };
-
